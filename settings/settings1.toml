@@ -1,0 +1,8 @@
+class_label_count
+attribute_count
+instance_count
+feature_count
+tree_count = 10
+max_depth = 3
+epsilon = 0.05
+decimal_precision = 10
