@@ -51,7 +51,12 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, subset_indices: &Vec<Vec<usize>>, spli
     let transaction_subsets = vec![vec![vec![1usize; instance_count]]; ctx.tree_count]; //3d treecount x nodes_to_process_per_tree x instance_count
     let ances_class_bits = 
     for d in 0 .. max_depth {
-
+        //find frequencies
+        //if last layer, create nodes and return
+        //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
+        //find the gini argmax, use that value as the split point
+        //create the new transaction subsets
+        
     }
 
     Ok(trees)
