@@ -22,7 +22,7 @@ fn main() {
     //load settings
     let (ctx, data, classes) = init(&fileloc.to_string()).unwrap();
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
-    let 
+    //let 
     //preprocess dataset according to the settings
     
 }
@@ -103,3 +103,71 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     }
     Ok((disc_subsets, structured_features, sel_vals))
 }
+
+
+
+pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>, 
+    active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
+
+        // assumes binary classification
+        let lab_row_wise = labels[1].clone();
+
+        for t in 0.. ctx.tree_count {
+            // row wise data
+            let row_wise = transpose(&disc_data[t]).unwrap();
+            
+
+            let mut active_data = vec![];
+            let mut active_labels = vec![];
+            // if row is valid, append to temp
+            for r in 0.. ctx.instance_count {
+                if active_rows[t][r] == 1 {
+                    active_data.push(row_wise[r].clone());
+                    active_labels.push(lab_row_wise[r])
+                }
+            }
+
+            let active_data = transpose(&active_data).unwrap();
+            let mut gini_vals = vec![];
+            let b = ctx.bin_count;
+            for k in 0.. ctx.feature_count {
+                gini_vals.push(gini_col(&active_data[k * b.. (k + 1) * b].to_vec(), &active_labels, ctx));
+            }
+        }
+
+        Ok(vec![])
+    }
+
+    
+    pub fn gini_col(cols: &Vec<Vec<usize>>, labels: &Vec<usize>, ctx: &Context) -> Result<f64, Box<dyn Error>> {
+
+        let mut bins = vec![vec![0 as f64; ctx.class_label_count]; ctx.bin_count];
+        let rows = transpose(cols).unwrap();
+        
+        let active_instance_count = rows.len();
+
+        for r in 0.. active_instance_count {
+            let row = &rows[r];
+            for j in 0.. ctx.bin_count {
+                if row[j] == 1 {
+                    bins[j][labels[r]] += 1 as f64;
+                }
+            }
+        }
+
+        let mut weights = vec![];
+        for row in bins.clone() {
+            weights.push(row.iter().sum());
+        }
+        let weight_sum: f64 = weights.iter().sum();
+
+        let mut gini = 0 as f64;
+        // Assumes binary classificaiton
+        for j in 0.. ctx.bin_count {
+            let val_0: f64 = bins[j][0]/weights[j];
+            let val_1: f64 = bins[j][1]/weights[j];
+            gini += ((val_0 * val_0) + (val_1 * val_1))/(weights[j]/weight_sum);
+        }
+
+        Ok(gini)
+    }

@@ -26,19 +26,26 @@ pub fn matrix_csv_to_float_vec(filename: &str) -> Result<Vec<Vec<f64>>, Box<dyn 
 
 }
 
-pub fn transpose(mat: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>, Box<dyn Error>> {
-
-    let mut mat_t = vec![vec![0f64; mat.len() ] ; mat[0].len()];
-
-    for i in 0..mat.len() {
-        for j in 0..mat[0].len() {
-            mat_t[j][i] = mat[i][j] 
-        }
-    }
-
-    Ok(mat_t)
-
+pub fn transpose<T: Clone>(v: &Vec<Vec<T>>) -> Result<Vec<Vec<T>>, Box<dyn Error>> {
+    assert!(!v.is_empty());
+    Ok((0..v[0].len())
+        .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
+        .collect())
 }
+
+// pub fn transpose(mat: &Vec<Vec<f64>>) -> Result<Vec<Vec<f64>>, Box<dyn Error>> {
+
+//     let mut mat_t = vec![vec![0f64; mat.len() ] ; mat[0].len()];
+
+//     for i in 0..mat.len() {
+//         for j in 0..mat[0].len() {
+//             mat_t[j][i] = mat[i][j] 
+//         }
+//     }
+
+//     Ok(mat_t)
+
+// }
 
 pub fn truncate(x: &f64, decimal_precision: usize) -> Result<f64, Box<dyn Error>> {
     let val = (x * (decimal_precision as f64)).round() / (decimal_precision as f64);
