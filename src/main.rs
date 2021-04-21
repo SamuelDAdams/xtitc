@@ -105,10 +105,37 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
 }
 
 
+pub fn class_frequencies(labels: &Vec<Vec<usize>>, active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<Vec<usize>>, Box<dyn Error>> {
+
+    let mut freq_vec = vec![vec![0; ctx.class_label_count]; ctx.tree_count];
+
+    for t in 0.. ctx.tree_count {
+        // row wise data
+        let row_wise = transpose(&labels).unwrap();
+
+        let mut active_labels = vec![];
+        // if row is valid, append to temp
+        for r in 0.. ctx.instance_count {
+            if active_rows[t][r] == 1 {
+                active_labels.push(row_wise[r].clone())
+            }
+        }
+
+        let active_labels = transpose(&active_labels).unwrap();
+        for i in 0.. ctx.class_label_count {
+            freq_vec[t][i] = active_labels[i].iter().sum();
+        }
+    }
+
+    Ok(freq_vec)
+
+}
+
 
 pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
 
+        let mut gini_index_per_tree = vec![0; ctx.tree_count];
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
 
@@ -131,13 +158,27 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
             let mut gini_vals = vec![];
             let b = ctx.bin_count;
             for k in 0.. ctx.feature_count {
-                gini_vals.push(gini_col(&active_data[k * b.. (k + 1) * b].to_vec(), &active_labels, ctx));
+                gini_vals.push(gini_col(&active_data[k * b.. (k + 1) * b].to_vec(), &active_labels, ctx).unwrap());
             }
+            gini_index_per_tree[t] = argmax(&gini_vals).unwrap();
         }
 
-        Ok(vec![])
+        Ok(gini_index_per_tree)
     }
 
+    pub fn argmax(v: &Vec<f64>) -> Result<usize, Box<dyn Error>> {
+        let mut max_val = v[0];
+        let mut max_index = 0;
+
+        for i in 0.. v.len() {
+            let val = v[i];
+            if val > max_val {
+                max_val = val;
+                max_index = i
+            }
+        }
+        Ok(max_index)
+    }
     
     pub fn gini_col(cols: &Vec<Vec<usize>>, labels: &Vec<usize>, ctx: &Context) -> Result<f64, Box<dyn Error>> {
 
