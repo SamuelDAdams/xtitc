@@ -2,7 +2,7 @@ mod util;
 use std::{error::Error};
 use util::*;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Context {
     pub instance_count: usize,
     pub class_label_count: usize,
@@ -17,14 +17,49 @@ pub struct Context {
     pub seed: usize,
 }
 
+#[derive(Default, Clone)]
+pub struct Node {
+    pub attribute: usize,
+    pub value: f64,
+    pub frequencies: Vec<usize>,
+}
+
 fn main() {
     let fileloc = "settings/settings1.toml";
     //load settings
     let (ctx, data, classes) = init(&fileloc.to_string()).unwrap();
+    let use_frequencies = false;
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
-    //let 
+    let trees = sid3t(&disc_data, &feature_selectors, &feature_values, &ctx);
     //preprocess dataset according to the settings
     
+}
+
+pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, subset_indices: &Vec<Vec<usize>>, split_points: &Vec<Vec<f64>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
+    let feature_count = ctx.feature_count;
+    let max_depth = ctx.max_depth;
+    let epsilon = ctx.epsilon;
+    let tree_count = ctx.tree_count;
+    let instance_count = ctx.instance_count;
+
+    let trees = vec![vec![Node {
+        attribute: 0,
+        value: 0f64,
+        frequencies: vec![],
+    }]; tree_count];
+
+    let transaction_subsets = vec![vec![vec![1usize; instance_count]]; ctx.tree_count]; //3d treecount x nodes_to_process_per_tree x instance_count
+    let ances_class_bits = 
+    for d in 0 .. max_depth {
+        //find frequencies
+        //if last layer, create nodes and return
+        //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
+        //find the gini argmax, use that value as the split point
+        //create the new transaction subsets
+        
+    }
+
+    Ok(trees)
 }
 
 pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<f64>>), Box<dyn Error>> {
