@@ -30,31 +30,97 @@ fn main() {
     let (ctx, data, classes) = init(&fileloc.to_string()).unwrap();
     let use_frequencies = false;
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
-    let trees = sid3t(&disc_data, &feature_selectors, &feature_values, &ctx);
+    let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx);
     //preprocess dataset according to the settings
     
 }
 
-pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, subset_indices: &Vec<Vec<usize>>, split_points: &Vec<Vec<f64>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
-    let feature_count = ctx.feature_count;
+pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indices: &Vec<Vec<usize>>, split_points: &Vec<Vec<f64>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
     let max_depth = ctx.max_depth;
     let epsilon = ctx.epsilon;
     let tree_count = ctx.tree_count;
     let instance_count = ctx.instance_count;
+    let class_label_count = 2;
 
-    let trees = vec![vec![Node {
+    let mut trees = vec![vec![Node {
         attribute: 0,
         value: 0f64,
         frequencies: vec![],
     }]; tree_count];
 
-    let transaction_subsets = vec![vec![vec![1usize; instance_count]]; ctx.tree_count]; //3d treecount x nodes_to_process_per_tree x instance_count
-    let ances_class_bits = 
+    let mut transaction_subsets = vec![vec![vec![1usize; instance_count]]; ctx.tree_count]; //3d treecount x nodes_to_process_per_tree x instance_count
+    let mut ances_class_bits = vec![vec![0usize];tree_count];
     for d in 0 .. max_depth {
+        let nodes_to_process_per_tree = 2usize.pow(d as u32);
+        let is_max_depth = d == max_depth - 1; // Are we at the final layer?
+        // let number_of_nodes_to_process = nodes_to_process_per_tree * tree_count;
         //find frequencies
+        let mut freqs = vec![vec![vec![]; nodes_to_process_per_tree]; tree_count];
+        let mut counts = vec![vec![0usize; nodes_to_process_per_tree]; tree_count];
+        let mut this_layer_class_bits = vec![vec![0usize; nodes_to_process_per_tree]; tree_count];
+        for t in 0 .. tree_count {
+            for n in 0 .. nodes_to_process_per_tree {
+                for b in 0 .. class_label_count {
+                    let transaction_subset: Vec<usize> = transaction_subsets[t][n].iter().zip(classes[b].iter()).map(|(x, y)| *x & *y).collect();
+                    let freq: usize = transaction_subset.iter().sum();
+                    if freq == 0 {
+                        this_layer_class_bits[t][n] = 1; //constant class
+                    }
+                    transaction_subsets[t][n] = transaction_subset;
+                    freqs[t][n].push(freq);
+                }
+                counts[t][n] = freqs[t][n].iter().sum();
+                if (counts[t][n] as f64) < (instance_count as f64 * epsilon) {
+                    this_layer_class_bits[t][n] = 1; //less than epsilon
+                }
+            }
+        }
         //if last layer, create nodes and return
+        if is_max_depth {
+            for t in 0 .. tree_count {
+                for n in 0 .. nodes_to_process_per_tree {
+                    let val = if ances_class_bits[t][n] == 1 {vec![0;class_label_count]} else {freqs[t][n].clone()};
+                    trees[t].push(Node {
+                        attribute: 0,
+                        value: 0.,
+                        frequencies: val,
+                    });
+                }
+            }
+            return Ok(trees);
+        }
         //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
+        let mut next_layer_tbvs = vec![vec![]];
+        let mut next_layer_class_bits = vec![vec![]];
+        let gini_argmax = gini_impurity(&data, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        for t in 0 .. tree_count {
+            for n in 0 .. nodes_to_process_per_tree {
+                let index= gini_argmax[t * nodes_to_process_per_tree + n];
+                let split = split_points[t][index];
+                let feat_selected = subset_indices[t][index];
+
+                let right_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| x & y).collect();
+                let left_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| x & (y ^ 1)).collect();
+                let frequencies = if ances_class_bits[t][n] == 0 && this_layer_class_bits[t][n] == 1 {freqs[t][n].clone()} else {vec![0; class_label_count]};
+                
+                next_layer_tbvs[t].push(left_tbv);
+                next_layer_tbvs[t].push(right_tbv);
+                next_layer_class_bits[t].push(ances_class_bits[t][n] | this_layer_class_bits[t][n]);
+                next_layer_class_bits[t].push(ances_class_bits[t][n] | this_layer_class_bits[t][n]);
+
+                trees[t].push(Node {
+                    attribute: feat_selected,
+                    value: split,
+                    frequencies: frequencies
+                })
+
+            }
+        }
+        transaction_subsets = next_layer_tbvs;
+        ances_class_bits = next_layer_class_bits;
+
         //find the gini argmax, use that value as the split point
+
         //create the new transaction subsets
         
     }
@@ -62,7 +128,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, subset_indices: &Vec<Vec<usize>>, spli
     Ok(trees)
 }
 
-pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<f64>>), Box<dyn Error>> {
+pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>>), Box<dyn Error>> {
 	let mut settings = config::Config::default();
     settings
         .merge(config::File::with_name(cfg_file.as_str())).unwrap()
@@ -85,7 +151,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<f64>>)
     let mut classes = matrix_csv_to_float_vec(&settings.get_str("classes")?)?;
 
     classes = transpose(&classes)?;
-    classes = classes.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let classes2d: Vec<Vec<usize>> = classes.iter().map(|x| x.iter().map(|y| *y as usize).collect()).collect();
 
 
     let c = Context {
@@ -102,7 +168,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<f64>>)
         seed,
     };
 
-    Ok((c, data, classes))
+    Ok((c, data, classes2d))
 }
 
 pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec<usize>>>, Vec<Vec<usize>>, Vec<Vec<f64>>), Box<dyn Error>>{
