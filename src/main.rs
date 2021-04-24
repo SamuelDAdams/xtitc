@@ -32,6 +32,7 @@ fn main() {
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
     let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx);
     //preprocess dataset according to the settings
+    
 }
 
 pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indices: &Vec<Vec<usize>>, split_points: &Vec<Vec<f64>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
@@ -314,7 +315,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
     }
 
 
-    pub fn classify_argmax(trees: &Vec<Vec<TreeNode>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    pub fn classify_argmax(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
     -> Result<f64, Box<dyn Error>> {
 
         let bin_count = 2;
@@ -329,7 +330,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
 
         for transaction in transactions {
 
-            let mut votes = vec![0; infer_ctx.class_label_count];
+            let mut votes = vec![0; ctx.class_label_count];
 
             for tree in ensemble {
 
@@ -339,7 +340,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
 
                 for d in 0.. depth {
                     let chosen_attr = tree[current_node].attribute;
-                    let splits = [tree[current_node].value]; // for the sake of keeping things the same
+                    let splits = [tree[current_node].value].to_vec(); // for the sake of keeping things the same
 
                     let val = transaction[chosen_attr];
 
@@ -388,7 +389,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
     }
 
 
-    pub fn classify_argmax(trees: &Vec<Vec<TreeNode>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    pub fn classify_softvote(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
     -> Result<f64, Box<dyn Error>> {
 
         let bin_count = 2;
@@ -403,17 +404,15 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
 
         for transaction in transactions {
 
-            let mut votes = vec![0; infer_ctx.class_label_count];
+            let mut votes = vec![0 as f64; ctx.class_label_count];
 
             for tree in ensemble {
 
-                let mut vote = 0;
-                
                 let mut current_node = 1;
 
                 for d in 0.. depth {
                     let chosen_attr = tree[current_node].attribute;
-                    let splits = [tree[current_node].value]; // for the sake of keeping things the same
+                    let splits = [tree[current_node].value].to_vec(); // for the sake of keeping things the same
 
                     let val = transaction[chosen_attr];
 
@@ -426,8 +425,8 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
                     current_node = bin_count * current_node + bin;
 
                     if tree[current_node].frequencies[0] != 0 || tree[current_node].frequencies[1] != 0 {
-                        let zero: f64 = tree[current_node].frequencies[0];
-                        let one: f64 = tree[current_node].frequencies[1];
+                        let zero: f64 = tree[current_node].frequencies[0] as f64;
+                        let one: f64 = tree[current_node].frequencies[1] as f64;
                         let total: f64 = zero + one;
 
                         votes[0] += zero/total;
