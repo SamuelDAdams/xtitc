@@ -32,7 +32,6 @@ fn main() {
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
     let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx);
     //preprocess dataset according to the settings
-    
 }
 
 pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indices: &Vec<Vec<usize>>, split_points: &Vec<Vec<f64>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
@@ -312,4 +311,150 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
         }
 
         Ok(gini)
+    }
+
+
+    pub fn classify_argmax(trees: &Vec<Vec<TreeNode>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    -> Result<f64, Box<dyn Error>> {
+
+        let bin_count = 2;
+        
+        let ensemble = trees;
+        let mut correctly_classified = 0;
+        let total_rows =  transactions.len();
+
+        let depth = ctx.max_depth - 1;
+
+        let mut transaction_index = 0;
+
+        for transaction in transactions {
+
+            let mut votes = vec![0; infer_ctx.class_label_count];
+
+            for tree in ensemble {
+
+                let mut vote = 0;
+                
+                let mut current_node = 1;
+
+                for d in 0.. depth {
+                    let chosen_attr = tree[current_node].attribute;
+                    let splits = [tree[current_node].value]; // for the sake of keeping things the same
+
+                    let val = transaction[chosen_attr];
+
+                    let mut bin = 0;
+                    for split in splits {
+                        if val < split {break};
+                        bin += 1;
+                    }
+
+                    current_node = bin_count * current_node + bin;
+
+                    // 'argmax'
+                    if tree[current_node].frequencies[0] > tree[current_node].frequencies[1] {
+                        vote = 0;
+                    } else {
+                        vote = 1
+                    }
+
+                    if d + 1 == depth {
+                        votes[vote] += 1;
+                    }
+
+                }
+                
+            }
+
+            let mut largest_index = 0;
+            let mut largest = votes[largest_index];
+
+            for i in 1.. votes.len() {
+                if largest < votes[i] {
+                    largest_index = i;
+                    largest = votes[i];
+                }
+            }
+
+            if labels[transaction_index] as usize == largest_index {
+                correctly_classified += 1;
+            }
+
+            transaction_index += 1;
+
+        }
+
+        Ok((correctly_classified as f64) / (total_rows as f64))
+    }
+
+
+    pub fn classify_argmax(trees: &Vec<Vec<TreeNode>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    -> Result<f64, Box<dyn Error>> {
+
+        let bin_count = 2;
+        
+        let ensemble = trees;
+        let mut correctly_classified = 0;
+        let total_rows =  transactions.len();
+
+        let depth = ctx.max_depth - 1;
+
+        let mut transaction_index = 0;
+
+        for transaction in transactions {
+
+            let mut votes = vec![0; infer_ctx.class_label_count];
+
+            for tree in ensemble {
+
+                let mut vote = 0;
+                
+                let mut current_node = 1;
+
+                for d in 0.. depth {
+                    let chosen_attr = tree[current_node].attribute;
+                    let splits = [tree[current_node].value]; // for the sake of keeping things the same
+
+                    let val = transaction[chosen_attr];
+
+                    let mut bin = 0;
+                    for split in splits {
+                        if val < split {break};
+                        bin += 1;
+                    }
+
+                    current_node = bin_count * current_node + bin;
+
+                    if tree[current_node].frequencies[0] != 0 || tree[current_node].frequencies[1] != 0 {
+                        let zero: f64 = tree[current_node].frequencies[0];
+                        let one: f64 = tree[current_node].frequencies[1];
+                        let total: f64 = zero + one;
+
+                        votes[0] += zero/total;
+                        votes[1] += one/total;
+                    }
+
+                }
+                
+            }
+
+            let mut largest_index = 0;
+            let mut largest = votes[largest_index];
+
+            for i in 1.. votes.len() {
+                if largest < votes[i] {
+                    largest_index = i;
+                    largest = votes[i];
+                }
+            }
+
+            if labels[transaction_index] as usize == largest_index {
+                correctly_classified += 1;
+            }
+
+            transaction_index += 1;
+
+        }
+
+        Ok((correctly_classified as f64) / (total_rows as f64))
     }
