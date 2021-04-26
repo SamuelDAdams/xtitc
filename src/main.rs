@@ -155,6 +155,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
 
     let data = matrix_csv_to_float_vec(&settings.get_str("data")?)?;
     let data = data.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let data = transpose(&data)?;
     let mut classes = matrix_csv_to_float_vec(&settings.get_str("classes")?)?;
 
     classes = transpose(&classes)?;
@@ -162,6 +163,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
 
     let data_test = matrix_csv_to_float_vec(&settings.get_str("data_test")?)?;
     let data_test = data_test.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let data_test = transpose(&data_test)?;
     let mut classes_test = matrix_csv_to_float_vec(&settings.get_str("classes_test")?)?;
 
     classes_test = transpose(&classes_test)?;
