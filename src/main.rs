@@ -277,9 +277,8 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
 
             let active_data = transpose(&active_data).unwrap();
             let mut gini_vals = vec![];
-            let b = ctx.bin_count;
             for k in 0.. ctx.feature_count {
-                gini_vals.push(gini_col(&active_data[k * b.. (k + 1) * b].to_vec(), &active_labels, ctx).unwrap());
+                gini_vals.push(gini_col(&active_data[k .. (k + 1)].to_vec(), &active_labels, ctx).unwrap());
             }
             gini_index_per_tree[t] = argmax(&gini_vals).unwrap();
         }
@@ -310,11 +309,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
 
         for r in 0.. active_instance_count {
             let row = &rows[r];
-            for j in 0.. ctx.bin_count {
-                if row[j] == 1 {
-                    bins[j][labels[r]] += 1 as f64;
-                }
-            }
+            bins[row[0]][labels[r]] += 1 as f64;
         }
 
         let mut weights = vec![];
