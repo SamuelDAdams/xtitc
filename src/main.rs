@@ -99,7 +99,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
         //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
         let mut next_layer_tbvs = vec![vec![]; tree_count];
         let mut next_layer_class_bits = vec![vec![]; tree_count];
-        let gini_argmax = gini_impurity(&data, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        let gini_argmax = gini_impurity(&data, nodes_to_process_per_tree, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
                 let index= gini_argmax[t * nodes_to_process_per_tree + n];
@@ -168,7 +168,6 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
 
     classes_test = transpose(&classes_test)?;
     let classes_test2d: Vec<Vec<usize>> = classes_test.iter().map(|x| x.iter().map(|y| *y as usize).collect()).collect();
-
 
     let c = Context {
         instance_count,
@@ -249,18 +248,27 @@ pub fn class_frequencies(labels: &Vec<Vec<usize>>, active_rows: &Vec<Vec<usize>>
 }
 
 
-pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>, 
+pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree: usize, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
+
+        let mut disc_data_ext = vec![];
+        
+        for tree in disc_data {
+            for _i in 0.. number_of_nodes_per_tree + 1 {
+                disc_data_ext.push(tree.clone());
+            }
+        }
 
         // println!("{:?}", active_rows);
 
-        let mut gini_index_per_tree = vec![0; ctx.tree_count];
+        let mut gini_index_per_tree = vec![0; ctx.tree_count * number_of_nodes_per_tree];
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
 
-        for t in 0.. ctx.tree_count {
+        for t in 0.. ctx.tree_count * number_of_nodes_per_tree {
+
             // row wise data
-            let row_wise = transpose(&disc_data[t]).unwrap();
+            let row_wise = transpose(&disc_data_ext[t]).unwrap();
 
             let mut active_data = vec![];
             let mut active_labels = vec![];
