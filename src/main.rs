@@ -100,6 +100,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
         let mut next_layer_tbvs = vec![vec![]; tree_count];
         let mut next_layer_class_bits = vec![vec![]; tree_count];
         let gini_argmax = gini_impurity(&data, nodes_to_process_per_tree, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        println!("{:?}", gini_argmax);
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
                 let index= gini_argmax[t * nodes_to_process_per_tree + n];
@@ -284,7 +285,12 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
             }
 
             let active_data = transpose(&active_data).unwrap();
+            if active_data.len() == 0 as usize {
+                gini_index_per_tree[t] = 0;
+                continue;
+            }
             let mut gini_vals = vec![];
+            // it's weird like this because we no longer OHE with bin_count in mind
             for k in 0.. ctx.feature_count {
                 gini_vals.push(gini_col(&active_data[k .. (k + 1)].to_vec(), &active_labels, ctx).unwrap());
             }
@@ -317,6 +323,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
         for r in 0.. active_instance_count {
             let row = &rows[r];
+            // it's weird like this because we no longer OHE with bin_count in mind
             bins[row[0]][labels[r]] += 1 as f64;
         }
 
