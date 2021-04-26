@@ -31,13 +31,6 @@ fn main() {
     //let use_frequencies = false;
     //preprocess dataset according to the settings
     let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
-    let feature_selectors = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
-    let feature_values = 
-    vec![vec![396.8666679676933,3582.2440809212403,214.3479512467384,281.3924332730062,820604.1810913497], 
-    vec![175.8725853883068,190.8717849781846,127.57492025363022,107.81530768751179,2095.11544598215],
-    vec![33470.962593262535,146.93060475706866,127.48053427465092,835.5306079698639,11554.328419675272],
-    vec![394.5404450376706,47687.021836217966,759219.9524914473,94.10921783948281,5.881694314585763],
-    vec![74.70761933260795,100868.49415164371,20241.49782356876,644.5577668168057,152.90517372090724]];
     let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx).unwrap();
     
     let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
@@ -213,6 +206,15 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
         sel_vals.push(vals);
         structured_features.push(feats);
     }
+
+    let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
+    let sel_vals = 
+    vec![vec![396.8666679676933,3582.2440809212403,214.3479512467384,281.3924332730062,820604.1810913497], 
+    vec![175.8725853883068,190.8717849781846,127.57492025363022,107.81530768751179,2095.11544598215],
+    vec![33470.962593262535,146.93060475706866,127.48053427465092,835.5306079698639,11554.328419675272],
+    vec![394.5404450376706,47687.021836217966,759219.9524914473,94.10921783948281,5.881694314585763],
+    vec![74.70761933260795,100868.49415164371,20241.49782356876,644.5577668168057,152.90517372090724]];
+
     let mut disc_subsets = vec![];
     for i in 0 .. ctx.tree_count {
         let mut disc_set = vec![];
@@ -265,8 +267,6 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
                 disc_data_ext.push(tree.clone());
             }
         }
-
-        // println!("{:?}", active_rows);
 
         let mut gini_index_per_tree = vec![0; ctx.tree_count * number_of_nodes_per_tree];
         // assumes binary classification
