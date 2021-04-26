@@ -1,8 +1,13 @@
-class_label_count
-attribute_count
-instance_count
-feature_count
+class_label_count = 2
+attribute_count = 30
+instance_count = 455
+feature_count = 5
 tree_count = 10
 max_depth = 3
 epsilon = 0.05
 decimal_precision = 10
+data = "clear_breast/1X_train.csv"
+classes = "clear_breast/1y_train.csv"
+data_test = "clear_breast/1X_test.csv"
+classes_test = "clear_breast/1y_test.csv"
+seed = 0

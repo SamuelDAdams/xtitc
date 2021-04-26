@@ -27,11 +27,17 @@ pub struct Node {
 fn main() {
     let fileloc = "settings/settings1.toml";
     //load settings
-    let (ctx, data, classes) = init(&fileloc.to_string()).unwrap();
-    let use_frequencies = false;
-    let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
-    let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx);
+    let (ctx, data, classes, data_test, classes_test) = init(&fileloc.to_string()).unwrap();
+    //let use_frequencies = false;
     //preprocess dataset according to the settings
+    let (disc_data, feature_selectors, feature_values) = xt_preprocess(&data, &ctx).unwrap();
+    let trees = sid3t(&disc_data, &classes, &feature_selectors, &feature_values, &ctx).unwrap();
+
+    
+    let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+    let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+
+    println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
     
 }
 
@@ -128,7 +134,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
     Ok(trees)
 }
 
-pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>>), Box<dyn Error>> {
+pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>>, Vec<Vec<f64>>, Vec<Vec<usize>>), Box<dyn Error>> {
 	let mut settings = config::Config::default();
     settings
         .merge(config::File::with_name(cfg_file.as_str())).unwrap()
@@ -153,6 +159,13 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
     classes = transpose(&classes)?;
     let classes2d: Vec<Vec<usize>> = classes.iter().map(|x| x.iter().map(|y| *y as usize).collect()).collect();
 
+    let data_test = matrix_csv_to_float_vec(&settings.get_str("data_test")?)?;
+    let data_test = data_test.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let mut classes_test = matrix_csv_to_float_vec(&settings.get_str("classes_test")?)?;
+
+    classes_test = transpose(&classes_test)?;
+    let classes_test2d: Vec<Vec<usize>> = classes_test.iter().map(|x| x.iter().map(|y| *y as usize).collect()).collect();
+
 
     let c = Context {
         instance_count,
@@ -168,7 +181,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
         seed,
     };
 
-    Ok((c, data, classes2d))
+    Ok((c, data, classes2d, data_test, classes_test2d))
 }
 
 pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec<usize>>>, Vec<Vec<usize>>, Vec<Vec<f64>>), Box<dyn Error>>{
@@ -236,6 +249,8 @@ pub fn class_frequencies(labels: &Vec<Vec<usize>>, active_rows: &Vec<Vec<usize>>
 pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
 
+        // println!("{:?}", active_rows);
+
         let mut gini_index_per_tree = vec![0; ctx.tree_count];
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
@@ -243,13 +258,15 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
         for t in 0.. ctx.tree_count {
             // row wise data
             let row_wise = transpose(&disc_data[t]).unwrap();
-            
 
             let mut active_data = vec![];
             let mut active_labels = vec![];
             // if row is valid, append to temp
+            
             for r in 0.. ctx.instance_count {
+                // println!("{}",active_rows[t][r]);
                 if active_rows[t][r] == 1 {
+
                     active_data.push(row_wise[r].clone());
                     active_labels.push(lab_row_wise[r])
                 }
@@ -315,7 +332,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
     }
 
 
-    pub fn classify_argmax(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    pub fn classify_argmax(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<usize>, ctx: &Context) 
     -> Result<f64, Box<dyn Error>> {
 
         let bin_count = 2;
@@ -389,7 +406,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, labels: &Vec<Vec<usize>>,
     }
 
 
-    pub fn classify_softvote(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<u64>, ctx: &Context) 
+    pub fn classify_softvote(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<usize>, ctx: &Context) 
     -> Result<f64, Box<dyn Error>> {
 
         let bin_count = 2;
