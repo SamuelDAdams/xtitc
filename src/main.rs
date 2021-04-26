@@ -148,7 +148,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
     let tree_count: usize = settings.get_int("tree_count")? as usize;
     let max_depth: usize = settings.get_int("max_depth")? as usize;
     let seed: usize = settings.get_int("seed")? as usize;
-    let epsilon: f64 = settings.get_int("epsilon")? as f64;
+    let epsilon: f64 = settings.get_float("epsilon")? as f64;
     let decimal_precision: usize = settings.get_int("decimal_precision")? as usize;
     let original_attr_count = attribute_count;
     let bin_count = 2usize;
@@ -212,7 +212,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
         for j in 0 .. ctx.feature_count {
             let val = sel_vals[i][j];
             let feat = structured_features[i][j];
-            let col = data[feat].iter().map(|x| (*x >= val) as usize).collect::<Vec<usize>>();
+            let col = data[feat].iter().map(|x| if *x >= val {1} else {0}).collect::<Vec<usize>>();
             disc_set.push(col);
         }
         disc_subsets.push(disc_set);
