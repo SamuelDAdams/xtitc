@@ -27,7 +27,7 @@ pub fn matrix_csv_to_float_vec(filename: &str) -> Result<Vec<Vec<f64>>, Box<dyn 
 }
 
 pub fn transpose<T: Clone>(v: &Vec<Vec<T>>) -> Result<Vec<Vec<T>>, Box<dyn Error>> {
-    assert!(!v.is_empty());
+    if v.is_empty() {return Ok(vec![])}
     Ok((0..v[0].len())
         .map(|i| v.iter().map(|inner| inner[i].clone()).collect::<Vec<T>>())
         .collect())
