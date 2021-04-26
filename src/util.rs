@@ -48,7 +48,7 @@ pub fn transpose<T: Clone>(v: &Vec<Vec<T>>) -> Result<Vec<Vec<T>>, Box<dyn Error
 // }
 
 pub fn truncate(x: &f64, decimal_precision: usize) -> Result<f64, Box<dyn Error>> {
-    let val = (x * (decimal_precision as f64)).round() / (decimal_precision as f64);
+    let val = (x * (2f64.powf(decimal_precision as f64) )).round() / (2f64.powf(decimal_precision as f64));
     Ok(val)
 }
 
