@@ -97,8 +97,8 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
             return Ok(trees);
         }
         //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
-        let mut next_layer_tbvs = vec![vec![]];
-        let mut next_layer_class_bits = vec![vec![]];
+        let mut next_layer_tbvs = vec![vec![]; tree_count];
+        let mut next_layer_class_bits = vec![vec![]; tree_count];
         let gini_argmax = gini_impurity(&data, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
