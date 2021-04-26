@@ -63,16 +63,17 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
         //find frequencies
         let mut freqs = vec![vec![vec![]; nodes_to_process_per_tree]; tree_count];
         let mut counts = vec![vec![0usize; nodes_to_process_per_tree]; tree_count];
+        let mut transaction_subsets_by_class = vec![vec![vec![]; nodes_to_process_per_tree]; tree_count];
         let mut this_layer_class_bits = vec![vec![0usize; nodes_to_process_per_tree]; tree_count];
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
                 for b in 0 .. class_label_count {
-                    let transaction_subset: Vec<usize> = transaction_subsets[t][n].iter().zip(classes[b].iter()).map(|(x, y)| *x & *y).collect();
+                    let transaction_subset: Vec<usize> = transaction_subsets[t][n].iter().zip(classes[b].iter()).map(|(x, y)| *x * *y).collect();
                     let freq: usize = transaction_subset.iter().sum();
                     if freq == 0 {
                         this_layer_class_bits[t][n] = 1; //constant class
                     }
-                    transaction_subsets[t][n] = transaction_subset;
+                    transaction_subsets_by_class[t][n].push(transaction_subset);
                     freqs[t][n].push(freq);
                 }
                 counts[t][n] = freqs[t][n].iter().sum();
