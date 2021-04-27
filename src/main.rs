@@ -430,22 +430,25 @@ pub fn class_frequencies(labels: &Vec<Vec<usize>>, active_rows: &Vec<Vec<usize>>
 pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree: usize, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
 
-        let mut disc_data_ext = vec![];
-        
-        for tree in disc_data {
-            for _i in 0.. number_of_nodes_per_tree {
-                disc_data_ext.push(tree.clone());
-            }
-        }
+        let length = disc_data.len();
 
-        let mut gini_index_per_tree = vec![0; ctx.tree_count * number_of_nodes_per_tree];
+        // let mut disc_data_ext = vec![];
+        
+        // for tree in disc_data {
+        //     for _i in 0.. number_of_nodes_per_tree {
+        //         disc_data_ext.push(tree.clone());
+        //     }
+        // }
+
+        let mut gini_index_per_tree = vec![0; length];
+        println!("{}", length);
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
 
-        for t in 0.. ctx.tree_count * number_of_nodes_per_tree {
+        for t in 0.. length {
 
             // row wise data
-            let row_wise = transpose(&disc_data_ext[t]).unwrap();
+            let row_wise = transpose(&disc_data[t]).unwrap();
 
             let mut active_data = vec![];
             let mut active_labels = vec![];
