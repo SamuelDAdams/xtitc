@@ -70,7 +70,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                     let transaction_subset: Vec<usize> = transaction_subsets[t][n].iter().zip(classes[b].iter()).map(|(x, y)| *x * *y).collect();
                     let freq: usize = transaction_subset.iter().sum();
                     if freq == 0 {
-                        this_layer_class_bits[t][n] = 1; //constant class
+                        this_layer_class_bits[t][n] = 1; //constant class 
                     }
                     transaction_subsets_by_class[t][n].push(transaction_subset);
                     freqs[t][n].push(freq);
@@ -81,6 +81,9 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 }
             }
         }
+
+        println!("{:?}", freqs);
+
         //if last layer, create nodes and return
         if is_max_depth {
             for t in 0 .. tree_count {
@@ -263,7 +266,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         let mut disc_data_ext = vec![];
         
         for tree in disc_data {
-            for _i in 0.. number_of_nodes_per_tree + 1 {
+            for _i in 0.. number_of_nodes_per_tree {
                 disc_data_ext.push(tree.clone());
             }
         }
@@ -280,11 +283,9 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
             let mut active_data = vec![];
             let mut active_labels = vec![];
             // if row is valid, append to temp
-            
             for r in 0.. ctx.instance_count {
                 // println!("{}",active_rows[t][r]);
                 if active_rows[t][r] == 1 {
-
                     active_data.push(row_wise[r].clone());
                     active_labels.push(lab_row_wise[r])
                 }
@@ -298,7 +299,7 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
             let mut gini_vals = vec![];
             // it's weird like this because we no longer OHE with bin_count in mind
             for k in 0.. ctx.feature_count {
-                gini_vals.push(gini_col(&active_data[k .. (k + 1)].to_vec(), &active_labels, ctx).unwrap());
+                gini_vals.push(gini_col(&active_data[k], &active_labels, ctx).unwrap());
             }
             gini_index_per_tree[t] = argmax(&gini_vals).unwrap();
         }
@@ -320,17 +321,16 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         Ok(max_index)
     }
     
-    pub fn gini_col(cols: &Vec<Vec<usize>>, labels: &Vec<usize>, ctx: &Context) -> Result<f64, Box<dyn Error>> {
+    pub fn gini_col(cols: &Vec<usize>, labels: &Vec<usize>, ctx: &Context) -> Result<f64, Box<dyn Error>> {
 
         let mut bins = vec![vec![0 as f64; ctx.class_label_count]; ctx.bin_count];
-        let rows = transpose(cols).unwrap();
+        // weirdness is artifact of needing bin_count, keeping it here to remind myself
+        let row = cols;
         
-        let active_instance_count = rows.len();
+        let active_instance_count = row.len();
 
         for r in 0.. active_instance_count {
-            let row = &rows[r];
-            // it's weird like this because we no longer OHE with bin_count in mind
-            bins[row[0]][labels[r]] += 1 as f64;
+            bins[row[r]][labels[r]] += 1 as f64;
         }
 
         let mut weights = vec![];
@@ -344,8 +344,9 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         for j in 0.. ctx.bin_count {
             let val_0: f64 = bins[j][0]/weights[j];
             let val_1: f64 = bins[j][1]/weights[j];
-            gini += ((val_0 * val_0) + (val_1 * val_1))/(weights[j]/weight_sum);
+            gini += ((val_0 * val_0) + (val_1 * val_1)) * (weights[j]/weight_sum);
         }
+
 
         Ok(gini)
     }
@@ -353,6 +354,16 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
     pub fn classify_argmax(trees: &Vec<Vec<Node>>, transactions: &Vec<Vec<f64>>, labels: &Vec<usize>, ctx: &Context) 
     -> Result<f64, Box<dyn Error>> {
+
+        // for tree in trees {
+        //     for node in tree {
+        //         println!("{} {} {:?}", node.attribute, node.value, node.frequencies);
+        //     }
+        // }
+
+        // pub attribute: usize,
+        // pub value: f64,
+        // pub frequencies: Vec<usize>
 
         let bin_count = 2;
         
@@ -388,13 +399,14 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
                     current_node = bin_count * current_node + bin;
 
-                    // 'argmax'
-                    if tree[current_node].frequencies[0] > tree[current_node].frequencies[1] {
-                        vote = 0;
-                    } else {
-                        vote = 1
-                    }
+                    //println!("0: {}, 1: {}", tree[current_node].frequencies[0], tree[current_node].frequencies[1]);
 
+                    // 'argmax'
+                    if tree[current_node].frequencies[0] < tree[current_node].frequencies[1] {
+                        vote = 1;
+                    } else {
+                        vote = 0;
+                    }
                     if d + 1 == depth {
                         votes[vote] += 1;
                     }
