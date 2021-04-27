@@ -329,6 +329,19 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
         structured_features.push(feats);
     }
 
+
+    // for val in  structured_features.clone() {
+    //     for d in val {
+    //         println!("{}", d);
+    //     }
+    // }
+
+    // for val in  sel_vals.clone() {
+    //     for d in val {
+    //         println!("{}", d);
+    //     }
+    // }
+
     // let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
     // let sel_vals = 
     // vec![vec![396.8666679676933,3582.2440809212403,214.3479512467384,281.3924332730062,820604.1810913497], 
