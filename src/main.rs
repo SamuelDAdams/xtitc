@@ -330,17 +330,17 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     }
 
 
-    // for val in  structured_features.clone() {
-    //     for d in val {
-    //         println!("{}", d);
-    //     }
-    // }
+    for val in  structured_features.clone() {
+        for d in val {
+            println!("{}", d);
+        }
+    }
 
-    // for val in  sel_vals.clone() {
-    //     for d in val {
-    //         println!("{}", d);
-    //     }
-    // }
+    for val in  sel_vals.clone() {
+        for d in val {
+            println!("{}", d);
+        }
+    }
 
     // let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
     // let sel_vals = 
@@ -449,7 +449,7 @@ pub fn class_frequencies(labels: &Vec<Vec<usize>>, active_rows: &Vec<Vec<usize>>
 pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree: usize, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
 
-        let length = disc_data.len();
+        let length = active_rows.len();
 
         // let mut disc_data_ext = vec![];
         
@@ -461,13 +461,14 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
         let mut gini_index_per_tree = vec![0; length];
         println!("{}", length);
+
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
 
         for t in 0.. length {
 
             // row wise data
-            let row_wise = transpose(&disc_data[t]).unwrap();
+            let row_wise = transpose(&disc_data[t / number_of_nodes_per_tree]).unwrap();
 
             let mut active_data = vec![];
             let mut active_labels = vec![];
