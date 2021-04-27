@@ -60,7 +60,7 @@ pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize, use_lossy: 
     let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
     let mut result = vec![];
     for _i in 0 .. num {
-        result.push(truncate(&(rng.gen_range(1, 1 << decimal_precision) as f64/2f64.powf(decimal_precision as f64) as f64), decimal_precision, use_lossy)?);
+        result.push(truncate(&(rng.gen_range(0, 1 << decimal_precision) as f64/2f64.powf(decimal_precision as f64) as f64), decimal_precision, use_lossy)?);
     }
     Ok(result)
 }

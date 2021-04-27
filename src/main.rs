@@ -312,6 +312,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
+    println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
@@ -369,6 +370,7 @@ pub fn xt_preprocess_per_node(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Ve
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
+    println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
