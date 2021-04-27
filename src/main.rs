@@ -15,6 +15,7 @@ pub struct Context {
     pub epsilon: f64,
     pub decimal_precision: usize,
     pub seed: usize,
+    pub emulate_fpp: bool,
 }
 
 #[derive(Default, Clone)]
@@ -109,9 +110,10 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 let split = split_points[t][index];
                 let feat_selected = subset_indices[t][index];
 
-                let right_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| x & y).collect();
-                let left_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| x & (y ^ 1)).collect();
+                let right_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| *x & *y).collect();
+                let left_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| *x & (*y ^ 1)).collect();
                 let frequencies = if ances_class_bits[t][n] == 0 && this_layer_class_bits[t][n] == 1 {freqs[t][n].clone()} else {vec![0; class_label_count]};
+                println!("Tree {:?} Node {:?} Left TBV size: {:?} Right TBV size: {:?}", t, n, left_tbv.iter().sum::<usize>(), right_tbv.iter().sum::<usize>());
                 
                 next_layer_tbvs[t].push(left_tbv);
                 next_layer_tbvs[t].push(right_tbv);
@@ -152,12 +154,13 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
     let max_depth: usize = settings.get_int("max_depth")? as usize;
     let seed: usize = settings.get_int("seed")? as usize;
     let epsilon: f64 = settings.get_float("epsilon")? as f64;
+    let emulate_fpp: bool = settings.get_bool("emulate_fpp")? as bool;
     let decimal_precision: usize = settings.get_int("decimal_precision")? as usize;
     let original_attr_count = attribute_count;
     let bin_count = 2usize;
 
     let data = matrix_csv_to_float_vec(&settings.get_str("data")?)?;
-    let data = data.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let data = data.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision, emulate_fpp).unwrap()).collect()).collect();
     let data = transpose(&data)?;
     let mut classes = matrix_csv_to_float_vec(&settings.get_str("classes")?)?;
 
@@ -165,7 +168,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
     let classes2d: Vec<Vec<usize>> = classes.iter().map(|x| x.iter().map(|y| *y as usize).collect()).collect();
 
     let data_test = matrix_csv_to_float_vec(&settings.get_str("data_test")?)?;
-    let data_test = data_test.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision).unwrap()).collect()).collect();
+    let data_test = data_test.iter().map(|x| x.iter().map(|y| truncate(y, decimal_precision, emulate_fpp).unwrap()).collect()).collect();
     let data_test = transpose(&data_test)?;
     let mut classes_test = matrix_csv_to_float_vec(&settings.get_str("classes_test")?)?;
 
@@ -184,6 +187,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
         epsilon,
         decimal_precision,
         seed,
+        emulate_fpp,
     };
 
     Ok((c, data, classes2d, data_test, classes_test2d))
@@ -192,7 +196,7 @@ pub fn init(cfg_file: &String) -> Result<(Context, Vec<Vec<f64>>, Vec<Vec<usize>
 pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec<usize>>>, Vec<Vec<usize>>, Vec<Vec<f64>>), Box<dyn Error>>{
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
-    let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed)?;
+    let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
@@ -203,7 +207,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
         for j in 0 .. ctx.feature_count {
             let feature = features[i * ctx.feature_count + j];
             let ratio = ratios[i * ctx.feature_count + j];
-            vals.push(truncate(&(ranges[feature] * ratio + mins[feature]), ctx.decimal_precision)?);
+            vals.push(truncate(&(ranges[feature] * ratio + mins[feature]), ctx.decimal_precision, ctx.emulate_fpp)?);
             feats.push(feature);
         }
         sel_vals.push(vals);

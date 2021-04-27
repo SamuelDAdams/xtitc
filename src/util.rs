@@ -47,16 +47,20 @@ pub fn transpose<T: Clone>(v: &Vec<Vec<T>>) -> Result<Vec<Vec<T>>, Box<dyn Error
 
 // }
 
-pub fn truncate(x: &f64, decimal_precision: usize) -> Result<f64, Box<dyn Error>> {
-    let val = (x * (2f64.powf(decimal_precision as f64) )).round() / (2f64.powf(decimal_precision as f64));
-    Ok(val)
+pub fn truncate(x: &f64, decimal_precision: usize, use_lossy: bool) -> Result<f64, Box<dyn Error>> {
+    if use_lossy {
+        let val = (x * (2f64.powf(decimal_precision as f64) )).round() / (2f64.powf(decimal_precision as f64));
+        Ok(val)
+    } else {
+        Ok(*x)
+    }
 }
 
-pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize) -> Result<Vec<f64>, Box<dyn Error>> {
+pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize, use_lossy: bool) -> Result<Vec<f64>, Box<dyn Error>> {
     let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
     let mut result = vec![];
     for _i in 0 .. num {
-        result.push(truncate(&rng.gen_range(0f64, 1f64), decimal_precision)?);
+        result.push(truncate(&rng.gen_range(0f64, 1f64), decimal_precision, use_lossy)?);
     }
     Ok(result)
 }
