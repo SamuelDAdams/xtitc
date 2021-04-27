@@ -12,3 +12,4 @@ data_test = "clear_breast/1X_test.csv"
 classes_test = "clear_breast/1y_test.csv"
 seed = 0
 emulate_fpp = true
+discretize_per_node = true
