@@ -91,7 +91,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
             }
         }
 
-        println!("{:?}", freqs);
+        //println!("{:?}", freqs);
 
         //if last layer, create nodes and return
         if is_max_depth {
@@ -121,7 +121,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 let right_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| *x & *y).collect();
                 let left_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][index]).map(|(x, y)| *x & (*y ^ 1)).collect();
                 let frequencies = if ances_class_bits[t][n] == 0 && this_layer_class_bits[t][n] == 1 {freqs[t][n].clone()} else {vec![0; class_label_count]};
-                println!("Tree {:?} Node {:?} Left TBV size: {:?} Right TBV size: {:?}", t, n, left_tbv.iter().sum::<usize>(), right_tbv.iter().sum::<usize>());
+                //println!("Tree {:?} Node {:?} Left TBV size: {:?} Right TBV size: {:?}", t, n, left_tbv.iter().sum::<usize>(), right_tbv.iter().sum::<usize>());
                 
                 next_layer_tbvs[t].push(left_tbv);
                 next_layer_tbvs[t].push(right_tbv);
@@ -191,7 +191,7 @@ pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>
             }
         }
 
-        println!("{:?}", freqs);
+        //println!("{:?}", freqs);
 
         //if last layer, create nodes and return
         if is_max_depth {
@@ -217,7 +217,7 @@ pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>
             }
         }
         let gini_argmax = gini_impurity(&disc_layer_data, 1, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
-        println!("{:?}", gini_argmax);
+        //println!("{:?}", gini_argmax);
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
                 let index= gini_argmax[t * nodes_to_process_per_tree + n];
@@ -227,7 +227,7 @@ pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>
                 let right_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][nodes_processed_thus_far/tree_count + n][index]).map(|(x, y)| *x & *y).collect();
                 let left_tbv: Vec<usize> = transaction_subsets[t][n].iter().zip(&data[t][nodes_processed_thus_far/tree_count + n][index]).map(|(x, y)| *x & (*y ^ 1)).collect();
                 let frequencies = if ances_class_bits[t][n] == 0 && this_layer_class_bits[t][n] == 1 {freqs[t][n].clone()} else {vec![0; class_label_count]};
-                println!("Tree {:?} Node {:?} Left TBV size: {:?} Right TBV size: {:?}", t, n, left_tbv.iter().sum::<usize>(), right_tbv.iter().sum::<usize>());
+                //println!("Tree {:?} Node {:?} Left TBV size: {:?} Right TBV size: {:?}", t, n, left_tbv.iter().sum::<usize>(), right_tbv.iter().sum::<usize>());
                 
                 next_layer_tbvs[t].push(left_tbv);
                 next_layer_tbvs[t].push(right_tbv);
@@ -330,17 +330,17 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     }
 
 
-    for val in  structured_features.clone() {
-        for d in val {
-            println!("{}", d);
-        }
-    }
+    // for val in  structured_features.clone() {
+    //     for d in val {
+    //         println!("{}", d);
+    //     }
+    // }
 
-    for val in  sel_vals.clone() {
-        for d in val {
-            println!("{}", d);
-        }
-    }
+    // for val in  sel_vals.clone() {
+    //     for d in val {
+    //         println!("{}", d);
+    //     }
+    // }
 
     // let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
     // let sel_vals = 
@@ -460,7 +460,6 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         // }
 
         let mut gini_index_per_tree = vec![0; length];
-        println!("{}", length);
 
         // assumes binary classification
         let lab_row_wise = labels[1].clone();
@@ -571,6 +570,8 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
             for tree in ensemble {
 
+                let mut valid_vote = false;
+
                 let mut vote = 0;
                 
                 let mut current_node = 1;
@@ -591,16 +592,17 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
 
                     //println!("0: {}, 1: {}", tree[current_node].frequencies[0], tree[current_node].frequencies[1]);
 
-                    // 'argmax'
-                    if tree[current_node].frequencies[0] < tree[current_node].frequencies[1] {
-                        vote = 1;
-                    } else {
-                        vote = 0;
+                    // if valid
+                    if tree[current_node].frequencies[0] != 0 || tree[current_node].frequencies[1] != 0 || d == ctx.max_depth -1 {
+                        // 'argmax'
+                        valid_vote = true;
+                        if tree[current_node].frequencies[0] < tree[current_node].frequencies[1] {
+                            votes[1] += 1;
+                        } else {
+                            votes[0] += 1;
+                        }
+                        break;
                     }
-                    if d + 1 == depth {
-                        votes[vote] += 1;
-                    }
-
                 }
                 
             }
