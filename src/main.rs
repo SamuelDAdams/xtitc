@@ -107,6 +107,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
             }
             return Ok(trees);
         }
+
         //if is constant or is below threshold of epsilon*instance_count and a parent node has not classified, have the node classify with the frequencies
         let mut next_layer_tbvs = vec![vec![]; tree_count];
         let mut next_layer_class_bits = vec![vec![]; tree_count];
@@ -165,6 +166,9 @@ pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>
     let mut ances_class_bits = vec![vec![0usize];tree_count];
     let mut nodes_processed_thus_far: usize = 0;
     for d in 0 .. max_depth {
+
+        println!("{}", d);
+
         let nodes_to_process_per_tree = 2usize.pow(d as u32);
         let is_max_depth = d == max_depth - 1; // Are we at the final layer?
         // let number_of_nodes_to_process = nodes_to_process_per_tree * tree_count;
@@ -330,17 +334,17 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     }
 
 
-    // for val in  structured_features.clone() {
-    //     for d in val {
-    //         println!("{}", d);
-    //     }
-    // }
+    for val in  structured_features.clone() {
+        for d in val {
+            println!("{}", d);
+        }
+    }
 
-    // for val in  sel_vals.clone() {
-    //     for d in val {
-    //         println!("{}", d);
-    //     }
-    // }
+    for val in  sel_vals.clone() {
+        for d in val {
+            println!("{}", d);
+        }
+    }
 
     // let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
     // let sel_vals = 
