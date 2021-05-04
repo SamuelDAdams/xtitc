@@ -37,10 +37,6 @@ fn main() {
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
-        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx).unwrap();
-        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
 
     } else {
 
@@ -61,21 +57,21 @@ fn main() {
             }
         }
 
-        let mode: &str = "traditional";
-        let trees = sid3t(&disc_data.clone(), &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
-        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        // let mode: &str = "traditional";
+        // let trees = sid3t(&disc_data.clone(), &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
+        // let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
         let mode: &str = "secure_old";
         let trees = sid3t(&disc_data.clone(), &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
-        let mode: &str = "secure_new";
-        let trees = sid3t(&disc_data.clone(), &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
-        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        // let mode: &str = "secure_new";
+        // let trees = sid3t(&disc_data.clone(), &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
+        // let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
 
     }
 }
@@ -121,8 +117,8 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 }
             }
         }
-
-        //println!("{:?}", freqs);
+        println!("FREQS FOR DEPTH {}", d);
+        println!("{:?}", freqs);
 
         //if last layer, create nodes and return
         if is_max_depth {
@@ -355,7 +351,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
-    println!("{:?}", ratios);
+    // println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
@@ -450,7 +446,7 @@ pub fn xt_preprocess_per_node(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Ve
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
-    println!("{:?}", ratios);
+    // println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
