@@ -60,7 +60,7 @@ pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize, use_lossy: 
     let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
     let mut result = vec![];
     for _i in 0 .. num {
-        result.push(truncate(&(rng.gen_range(1, 1 << decimal_precision) as f64/2f64.powf(decimal_precision as f64) as f64), decimal_precision, use_lossy)?);
+        result.push(truncate(&(rng.gen_range(0, 1 << decimal_precision) as f64/2f64.powf(decimal_precision as f64) as f64), decimal_precision, use_lossy)?);
     }
     Ok(result)
 }
@@ -73,3 +73,65 @@ pub fn get_features(num: usize, attribute_count: usize, seed: usize) -> Result<V
     }
     Ok(result)
 }
+
+pub fn protocol_mult(a: &Vec<usize>, b: &Vec<usize>) -> Vec<usize> {
+    let mut c = vec![];
+
+    assert_eq!(a.len(), b.len());
+
+    for i in 0.. a.len() {
+        c.push(a[i] * b[i]);
+    }
+
+    c
+}
+
+pub fn protocol_geq(a: &Vec<usize>, b: &Vec<usize>) -> Vec<usize> {
+    let mut c = vec![];
+
+    assert_eq!(a.len(), b.len());
+
+    for i in 0.. a.len() {
+        if a[i] >= b[i] {
+            c.push(1)
+        }
+        else {
+            c.push(0)
+        }
+    }
+    c
+}
+
+pub fn protocol_dot(a: &Vec<usize>, b: &Vec<usize>) -> usize {
+    let mut c = 0;
+
+    assert_eq!(a.len(), b.len());
+
+    for i in 0.. a.len() {
+        c += a[i] * b[i];
+
+        // if a[i] > 1 || b[i] > 1 {
+        //     println!("WARNING: DOT PRODUCT CONTAINS NON-ZERO/ONE VALUES. a[i] = {}, b[i] = {}", a[i], b[i]);
+        // }
+    }
+
+    c
+}
+
+pub fn protocol_par(a: &Vec<Vec<usize>>) -> Vec<usize> {
+    let mut c = vec![];
+    for i in 0.. a.len() {
+        if a[i].len() <= 1 {
+            c.push(a[i][0]);
+            continue
+        }
+        assert_eq!(a[i].len(), a[(i + 1) % a[i].len()].len());
+        let mut prod = 1;
+        for val in a[i].clone() {
+            prod += val * prod;
+        }
+        c.push(prod);
+    }
+    c
+}
+
