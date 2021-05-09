@@ -121,8 +121,8 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 }
             }
         }
-        println!("FREQS FOR DEPTH {}", d);
-        println!("{:?}", freqs);
+        // println!("FREQS FOR DEPTH {}", d);
+        // println!("{:?}", freqs);
 
         //if last layer, create nodes and return
         if is_max_depth {
