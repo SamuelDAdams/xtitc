@@ -36,12 +36,12 @@ fn main() {
     let (ctx, data, classes, data_test, classes_test) = init(&fileloc.to_string()).unwrap();
     if ctx.discretize_per_node {
 
-        let mode: &str = "traditional";
+        // let mode: &str = "traditional";
         let (disc_data, feature_selectors, feature_values) = xt_preprocess_per_node(&data, &ctx).unwrap();
-        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
-        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        // let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
+        // let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        // println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
         let mode: &str = "secure_old";
         let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
