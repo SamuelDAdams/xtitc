@@ -41,10 +41,6 @@ fn main() {
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
-        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx).unwrap();
-        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
 
     } else {
 
@@ -125,8 +121,8 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
                 }
             }
         }
-
-        //println!("{:?}", freqs);
+        println!("FREQS FOR DEPTH {}", d);
+        println!("{:?}", freqs);
 
         //if last layer, create nodes and return
         if is_max_depth {
@@ -359,6 +355,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
+    // println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
@@ -454,6 +451,7 @@ pub fn xt_preprocess_per_node(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Ve
     let maxes: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(0./0., f64::max)).collect();
     let mins: Vec<f64> = data.iter().map(|x| x.iter().cloned().fold(1./0., f64::min)).collect();
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
+    // println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
     let features = get_features(ctx.feature_count * ctx.tree_count * nodes_per_tree, ctx.attribute_count, ctx.seed)?;
     let mut sel_vals = vec![];
@@ -823,6 +821,11 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
 
         let mut new_numerators = gini_numerators.clone();
         let mut new_denominators = gini_denominators.clone();
+
+        // let rev_num = protocol::open(&gini_numerators, ctx).unwrap();
+        // let rev_denom = protocol::open(&gini_denominators, ctx).unwrap();
+        let ratios: Vec<f64> = gini_numerators.iter().zip(gini_denominators.iter()).map(|(x, y)| *x as f64 / *y as f64).collect();
+        ratios.chunks(feat_count).for_each(|x| println!("{:?}", x));
 
         // this will allow us to calculate the arg_max
         let mut past_assignments = vec![];
