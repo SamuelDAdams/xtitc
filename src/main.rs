@@ -46,7 +46,7 @@ fn main() {
         let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        println!("argmax: {} %, softvote: = {} %, 1324132412341234123423 seconds", argmax_acc * 100.0, softvote_acc * 100.0);
 
     } else {
 
