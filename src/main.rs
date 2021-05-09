@@ -370,7 +370,7 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
     let ratios = get_ratios(ctx.feature_count * ctx.tree_count, ctx.decimal_precision, ctx.seed, ctx.emulate_fpp)?;
     // println!("{:?}", ratios);
     let ranges: Vec<f64> = maxes.iter().zip(mins.iter()).map(|(max , min)| max - min).collect();
-    let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed)?;
+    let features = get_features(ctx.feature_count * ctx.tree_count, ctx.attribute_count, ctx.seed, "without_replacement")?;
     let mut sel_vals = vec![];
     let mut structured_features = vec![];
     for i in 0 .. ctx.tree_count {

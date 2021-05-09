@@ -65,13 +65,30 @@ pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize, use_lossy: 
     Ok(result)
 }
 
-pub fn get_features(num: usize, attribute_count: usize, seed: usize) -> Result<Vec<usize>, Box<dyn Error>> {
-    let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
-    let mut result = vec![];
-    for _i in 0 .. num {
-        result.push(rng.gen_range(0, attribute_count));
+pub fn get_features(num: usize, attribute_count: usize, seed: usize, mode: &str) -> Result<Vec<usize>, Box<dyn Error>> {
+    if mode.eq("with_replacement") {
+        let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
+        let mut result = vec![];
+        for _i in 0 .. num {
+            result.push(rng.gen_range(0, attribute_count));
+        }
+        return Ok(result)
     }
-    Ok(result)
+
+    // else without_replacement
+    let mut indices = vec![];
+    
+    for i in 0.. attribute_count {
+        indices.push(i);
+    }
+
+    let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
+    
+    rng.shuffle(&mut indices);
+
+
+    Ok(indices[0..num].to_vec())
+
 }
 
 pub fn protocol_mult(a: &Vec<usize>, b: &Vec<usize>) -> Vec<usize> {
