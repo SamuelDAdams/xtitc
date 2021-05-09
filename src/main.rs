@@ -825,7 +825,7 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
         // let rev_num = protocol::open(&gini_numerators, ctx).unwrap();
         // let rev_denom = protocol::open(&gini_denominators, ctx).unwrap();
         let ratios: Vec<f64> = gini_numerators.iter().zip(gini_denominators.iter()).map(|(x, y)| *x as f64 / *y as f64).collect();
-        ratios.chunks(feat_count).for_each(|x| println!("{:?}", x));
+        // ratios.chunks(feat_count).for_each(|x| println!("{:?}", x));
 
         // this will allow us to calculate the arg_max
         let mut past_assignments = vec![];
