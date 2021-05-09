@@ -65,7 +65,7 @@ pub fn get_ratios(num: usize, decimal_precision: usize, seed: usize, use_lossy: 
     Ok(result)
 }
 
-pub fn get_features(num: usize, attribute_count: usize, seed: usize, mode: &str) -> Result<Vec<usize>, Box<dyn Error>> {
+pub fn get_features(num: usize, attribute_count: usize, seed: usize, feature_count: usize, mode: &str) -> Result<Vec<usize>, Box<dyn Error>> {
     if mode.eq("with_replacement") {
         let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
         let mut result = vec![];
@@ -77,17 +77,22 @@ pub fn get_features(num: usize, attribute_count: usize, seed: usize, mode: &str)
 
     // else without_replacement
     let mut indices = vec![];
-    
+
     for i in 0.. attribute_count {
         indices.push(i);
     }
 
-    let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
+    let mut result = vec![];
     
-    rng.shuffle(&mut indices);
+    let number_of_nodes = num/feature_count; // guarenteed to divide evenly
+    let mut rng = if seed > 0 {rand::StdRng::from_seed(&[seed])} else {rand::StdRng::new()?};
 
+    for n in 0.. number_of_nodes {
+        rng.shuffle(&mut indices);
+        result.append(&mut indices[0.. feature_count].to_vec())
+    }
 
-    Ok(indices[0..num].to_vec())
+    return Ok(result)
 
 }
 
