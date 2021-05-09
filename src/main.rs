@@ -36,8 +36,14 @@ fn main() {
     let (ctx, data, classes, data_test, classes_test) = init(&fileloc.to_string()).unwrap();
     if ctx.discretize_per_node {
 
+        let mode: &str = "traditional";
         let (disc_data, feature_selectors, feature_values) = xt_preprocess_per_node(&data, &ctx).unwrap();
-        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx).unwrap();
+        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
+        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        let mode: &str = "secure_old";
+        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
@@ -188,7 +194,7 @@ pub fn sid3t(data: &Vec<Vec<Vec<usize>>>, classes: &Vec<Vec<usize>>, subset_indi
     Ok(trees)
 }
 
-pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>>, subset_indices: &Vec<Vec<Vec<usize>>>, split_points: &Vec<Vec<Vec<f64>>>, ctx: &Context) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
+pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>>, subset_indices: &Vec<Vec<Vec<usize>>>, split_points: &Vec<Vec<Vec<f64>>>, ctx: &Context, gini: &str) -> Result<Vec<Vec<Node>>, Box<dyn Error>>{
     let max_depth = ctx.max_depth;
     let epsilon = ctx.epsilon;
     let tree_count = ctx.tree_count;
@@ -259,7 +265,14 @@ pub fn sid3t_per_node(data: &Vec<Vec<Vec<Vec<usize>>>>, classes: &Vec<Vec<usize>
                 disc_layer_data.push(data[t][n].clone());
             }
         }
-        let gini_argmax = gini_impurity(&disc_layer_data, 1, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        let mut gini_argmax = vec![];
+
+        if gini.eq("traditional") {
+            gini_argmax = gini_impurity(&disc_layer_data, 1, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        } else if gini.eq("secure_old") {
+            gini_argmax = gini_impurity_secure_algorithm_updated_disc_per_node(&disc_layer_data, d, &classes, &transaction_subsets.clone().into_iter().flatten().collect(), &ctx)?;
+        }
+
         //println!("{:?}", gini_argmax);
         for t in 0 .. tree_count {
             for n in 0 .. nodes_to_process_per_tree {
@@ -474,15 +487,6 @@ pub fn xt_preprocess_per_node(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Ve
         sel_vals.push(tree_vals);
         structured_features.push(tree_feats); 
     }
-
-    // let structured_features = vec![vec![26,11,24,25,3], vec![27,6,16,16,11],vec![21,21,15,25,1],vec![10,2,3,24,17],vec![9,22,1,22,4]];
-    // let sel_vals = 
-    // vec![
-    // vec![396.8666679676933,3582.2440809212403,214.3479512467384,281.3924332730062,820604.1810913497], 
-    // vec![175.8725853883068,190.8717849781846,127.57492025363022,107.81530768751179,2095.11544598215],
-    // vec![33470.962593262535,146.93060475706866,127.48053427465092,835.5306079698639,11554.328419675272],
-    // vec![394.5404450376706,47687.021836217966,759219.9524914473,94.10921783948281,5.881694314585763],
-    // vec![74.70761933260795,100868.49415164371,20241.49782356876,644.5577668168057,152.90517372090724]];
 
     let mut disc_subsets = vec![];
     for i in 0 .. ctx.tree_count {
@@ -981,6 +985,616 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
 
         Ok(new_gini)
     }
+
+
+    pub fn gini_impurity_secure_algorithm_updated_disc_per_node(disc_data: &Vec<Vec<Vec<usize>>>, depth: usize, labels: &Vec<Vec<usize>>, 
+        active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
+    
+            let base: usize = 2;
+            let number_of_nodes_to_process = ctx.tree_count * base.pow((depth) as u32);
+    
+            let class_label_count = ctx.class_label_count;
+            let decimal_precision = 10;
+            let bin_count = ctx.bin_count;
+            let feat_count = ctx.feature_count;
+            let attribute_count = feat_count * bin_count;
+    
+            let alpha = 1; // Need this from ctx
+    
+            let data_instance_count = ctx.instance_count;
+    
+            let mut gini_arg_max: Vec<Vec<usize>> = vec![];
+    
+            let mut x_partitioned =
+                vec![vec![vec![vec![0; bin_count]; class_label_count]; feat_count];number_of_nodes_to_process];
+            let mut x2 =
+                vec![vec![vec![vec![0; bin_count]; class_label_count]; feat_count];number_of_nodes_to_process];
+    
+            let mut y_partitioned =
+                vec![vec![vec![0; bin_count]; feat_count]; number_of_nodes_to_process];
+    
+            let mut gini_numerators = vec![0; feat_count * number_of_nodes_to_process];
+    
+    
+            // create u_decimal
+            let mut u_decimal = vec![];
+            
+            assert_eq!(active_rows.len(), number_of_nodes_to_process);
+    
+            for n in 0.. number_of_nodes_to_process {
+                for i in 0.. class_label_count {
+                    u_decimal.append(&mut protocol_mult(&active_rows[n].clone(), &labels[i].clone()))
+                }
+            }
+            // done creating u_decimal
+    
+            // create input
+            let mut input: Vec<Vec<Vec<usize>>> = vec![];
+    
+            assert_eq!(disc_data.len(), number_of_nodes_to_process);        
+    
+            for t in 0.. number_of_nodes_to_process {
+                let tree_data = disc_data[t].clone();
+                let mut ohe_disc_data_t = vec![];
+    
+                for col in tree_data {
+                    let mut big_col = vec![vec![]; bin_count];
+                    for val in col {
+                        // since val is gonna be in [0, bin_count), index by it and push 1
+                        big_col[val].push(1);
+                        // push a 0 in all cols where val does not belong
+                        for j in 0.. bin_count {
+                            if val != j {
+                                big_col[j].push(0)
+                            }
+                        }
+                    }
+                    ohe_disc_data_t.append(&mut big_col);
+                }
+    
+                assert_eq!(ohe_disc_data_t.len(), attribute_count);
+    
+
+                input.push(ohe_disc_data_t.clone())
+            
+            }
+            assert_eq! (input.len(), number_of_nodes_to_process);
+            assert_eq!(input[0].len(), attribute_count);
+            assert_eq!(input[0][0].len(), ctx.instance_count);
+            // done creating input
+    
+            // Determine the number of transactions that are:
+            // 1. in the current subset
+            // 2. predict the i-th class value
+            // 3. and have the j-th value of the k-th attribute for each node n
+    
+    
+            // NOTE: Work on more meaningful names...
+            let mut u_decimal_vectors = vec![];
+    
+            let mut u_decimal_extended = vec![];
+    
+            let mut discretized_sets_vectors: Vec<usize> = vec![];
+    
+            let mut discretized_sets = vec![vec![]; bin_count];
+    
+    
+            // make vectors of active rows and discretized sets parrallel to prepare for
+            // batch multiplication in order to find frequencies of classes
+            for n in 0.. number_of_nodes_to_process {
+                for k in 0.. feat_count {
+                    for i in 0.. class_label_count {
+    
+                        let mut u_decimal_clone = u_decimal[(n * class_label_count + i) * data_instance_count.. 
+                            (n * class_label_count + i + 1) * data_instance_count].to_vec();
+    
+                        u_decimal_extended.append(&mut u_decimal_clone);
+    
+    
+                        for j in 0.. bin_count {
+                            // grabs column of data, right?
+                            discretized_sets[j].append(&mut input[n][k * bin_count + j].clone());
+                        }
+    
+                    }
+                }
+            }
+    
+            let mut u_decimal_vectors_clone = u_decimal_vectors.clone();
+    
+            for j in 0.. bin_count {
+                discretized_sets_vectors.append(&mut discretized_sets[j]);
+                u_decimal_vectors.append(&mut u_decimal_extended.clone());
+            }
+    
+            let batched_un_summed_frequencies =
+            protocol_mult(&u_decimal_vectors, &discretized_sets_vectors);
+    
+            let total_number_of_rows = ctx.instance_count;
+    
+            let number_of_xs = batched_un_summed_frequencies.len() / (bin_count * total_number_of_rows);
+    
+            for v in 0..number_of_xs {
+                
+                for j in 0.. bin_count {
+    
+                    // Sum up "total_number_of_rows" values to obtain frequency of classification for a particular subset
+                    // of data split a particular way dictated by things like the random feature chosen, and its split.
+                    let dp_result = batched_un_summed_frequencies
+                        [(v + number_of_xs * j) * total_number_of_rows.. 
+                        (v + 1 + number_of_xs * j) * total_number_of_rows].to_vec().iter().sum();
+    
+    
+                    //println!("idx: {}, max size: {}", (v + 1 + number_of_xs * j) * total_number_of_rows , batched_un_summed_frequencies.len());
+                    
+                    x_partitioned[v / (feat_count * class_label_count)][(v / class_label_count) % feat_count]
+                        [v % class_label_count][j] = dp_result;
+    
+                    y_partitioned[v / (feat_count * class_label_count)][(v / class_label_count) % feat_count][j] +=
+                        dp_result;
+    
+                }
+    
+            }
+    
+    
+    
+            // ////////////////// TEST //////////////////// RETURNS CORRECT RESULTS 
+    
+    
+            // let mut ans = vec![0; number_of_nodes_to_process];
+            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
+    
+            // for n in 0.. number_of_nodes_to_process {
+            //     for k in 0.. feat_count {
+            //         let mut g_k = 0.0;
+            //         for j in 0.. bin_count {
+            //             let mut x2s = 0;
+            //             for i in 0.. class_label_count {
+            //                 let base = x_partitioned[n][k][i][j];
+            //                 let x2 = base.pow(2);
+            //                 x2s += x2;
+            //             }
+            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
+            //         }
+            //         g[n][k] = g_k;
+            //     }
+            //     ans[n] = argmax(&g[n].clone())?;
+            // }
+            // return Ok(ans);
+    
+    
+            // ///// END TEST ////////////////////////////
+    
+            
+    
+    
+    
+    
+    
+            let mut all_x_values = vec![];
+    
+            for n in 0..number_of_nodes_to_process {
+                for k in 0..feat_count { // should also be indexed by j?
+                    y_partitioned[n][k][0] =
+                        alpha * y_partitioned[n][k][0] + 0;
+                    y_partitioned[n][k][1] =
+                        alpha * y_partitioned[n][k][1] + 0;
+    
+                    // will be used to find x^2
+                    for i in 0..class_label_count {
+                        all_x_values.append(&mut x_partitioned[n][k][i]);
+                    }
+                }
+            }
+    
+            let all_x_values_squared: Vec<usize> = protocol_mult(&all_x_values, &all_x_values);
+    
+            for v in 0..all_x_values_squared.len() / 2 {
+                for j in 0.. bin_count {
+                    x2[v / (feat_count * class_label_count)][(v / class_label_count) % feat_count]
+                    [v % class_label_count][j] = all_x_values_squared[bin_count * v + j];
+                }
+            }
+    
+    
+    
+    
+    
+            // ////////////////// TEST //////////////////// failed...?
+            // // 
+            // // returns correct result IF  we don't multiply y values b alpha and then add 1. However,
+            // // still returns wrong answer if we don't do the former operations, but let the algorithm run to its end
+            // // which is strange.
+    
+    
+            // let mut ans = vec![0; number_of_nodes_to_process];
+            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
+    
+            // for n in 0.. number_of_nodes_to_process {
+            //     for k in 0.. feat_count {
+            //         let mut g_k = 0.0;
+            //         for j in 0.. bin_count {
+            //             let mut x2s = 0;
+            //             for i in 0.. class_label_count {
+            //                 x2s += x2[n][k][i][j];
+            //             }
+            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
+            //         }
+            //         g[n][k] = g_k;
+            //     }
+            //     ans[n] = argmax(&g[n].clone())?;
+            // }
+            // return Ok(ans);
+    
+    
+            // ///// END TEST ////////////////////////////
+    
+    
+    
+    
+    
+    
+            // At this point we have all of our x, x^2 and y values. Now we can start calculation gini numerators/denominators
+            let mut sum_of_x2_j =  vec![vec![vec![0; bin_count]; feat_count]; number_of_nodes_to_process];
+    
+            // let mut d_exclude_j = vec![vec![vec![Wrapping(0); bin_count]; feat_count]; number_of_nodes_to_process];
+            // let mut d_include_j = vec![vec![]; number_of_nodes_to_process];
+    
+            let mut d_exclude_j = vec![];
+            let mut d_include_j = vec![];
+    
+            // create vector of the 0 and 1 values for j to set us up for batch multiplicaiton.
+            // also, sum all of the x^2 values over i, and push these sums over i to a vector
+            // to batch multiply with the y_without_j values.
+            for n in 0..number_of_nodes_to_process {
+    
+                let mut y_vals_include_j = vec![vec![]; feat_count];
+    
+                for k in 0..feat_count {
+    
+                    let mut y_vals_exclude_j = vec![vec![]; bin_count];
+    
+                    for j in 0.. bin_count {
+                        
+                        // at the j'th index of the vector, we need to 
+                        // push all values at indeces that are not equal to j onto it
+                        // not 100% sure about this..
+                        for not_j in 0.. bin_count {
+                            if j != not_j {
+                                y_vals_exclude_j[j].push(y_partitioned[n][k][not_j]);
+                            }
+                        }
+    
+                        y_vals_include_j[k].push(y_partitioned[n][k][j]);
+                        
+    
+                        let mut sum_j_values = 0;
+            
+                        for i in 0..class_label_count {
+                            sum_j_values += x2[n][k][i][j];
+                        }
+                        
+                        sum_of_x2_j[n][k][j] = sum_j_values;
+                    }
+                    d_exclude_j.extend(y_vals_exclude_j);
+                    // can be far better optimized. Named 'D' after De'Hooghs variable
+                    // d_exclude_j[n][k] = protocol::pairwise_mult_zq(&y_vals_exclude_j, ctx).unwrap();
+                    // println!("exclude {:?}", protocol::open(&d_exclude_j[n][k], ctx).unwrap()); //test
+                    // 
+                    // d_exclude_j.append(y_vals_exclude_j); what we should do?
+                }
+                d_include_j.extend(y_vals_include_j);
+                //println!("{:?}", d_include_j);
+                //d_include_j[n] = protocol::pairwise_mult_zq(&y_vals_include_j, ctx).unwrap();
+                // println!("include {:?}", protocol::open(&d_include_j[n], ctx).unwrap()); //test
+                // d_include_j.append(y_vals_include_j); what we should do?
+            }
+    
+            let mut sum_of_x2_j_flattend = vec![];
+    
+            for n in 0.. number_of_nodes_to_process {
+                for k in 0.. feat_count {
+                    sum_of_x2_j_flattend.append(&mut sum_of_x2_j[n][k].clone());
+                }
+            } 
+    
+    
+    
+    
+            // ////////////////// TEST //////////////////// failed...?
+            // // returns correct result IF  we don't multiply y values b alpha and then add 1. However,
+            // // still returns wrong answer if we don't do the former operations, but let the algorithm run to its end
+            // // which is strange.
+            // let mut ans = vec![0; number_of_nodes_to_process];
+            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
+    
+            // for n in 0.. number_of_nodes_to_process {
+            //     for k in 0.. feat_count {
+            //         let mut g_k = 0.0;
+            //         for j in 0.. bin_count {
+            //             let mut x2s = sum_of_x2_j[n][k][j];
+            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
+            //         }
+            //         g[n][k] = g_k;
+            //     }
+            //     ans[n] = argmax(&g[n].clone())?;
+            // }
+            // return Ok(ans);
+    
+            // ///// END TEST ////////////////////////////
+    
+    
+    
+    
+    
+            let d_exclude_j = protocol_par(&d_exclude_j);
+            let d_include_j = protocol_par(&d_include_j);
+    
+            let gini_numerators_values_flat_unsummed = protocol_mult(&d_exclude_j, &sum_of_x2_j_flattend);
+    
+            // println!("{}", d_exclude_j_flattend.len()); //test
+            // println!("{}", sum_of_x2_j_flattend.len()); //test
+    
+            for v in 0.. gini_numerators_values_flat_unsummed.len() / bin_count {
+                for j in 0.. bin_count {
+                    gini_numerators[v] += gini_numerators_values_flat_unsummed[v * bin_count + j];
+                }
+            }
+    
+            // create denominators
+            let mut gini_denominators: Vec<usize> = d_include_j;
+    
+            // println!("{}: {:?}", gini_numerators.len(), gini_numerators); //test
+            // println!("{}: {:?}", gini_denominators.len(), gini_denominators); //test
+    
+    
+    
+            // //////////// TEST //////////////// RETURNS INCORRECT RESULT (regardless of alpha value)
+    
+            // let mut gini_ratio = vec![];
+    
+            // for v in 0.. gini_numerators.len() / feat_count {
+            //     let mut tmp = vec![];
+            //     for n in 0..feat_count {
+            //         let idx = v * feat_count + n;
+            //         tmp.push(gini_numerators[idx] as f64 / gini_denominators[idx] as f64)
+            //     }
+            //     gini_ratio.push(argmax(&tmp)?);
+            // }
+            // return Ok(gini_ratio);
+    
+    
+            // //// END TEST //////////// 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+            // for n in 0.. number_of_nodes_to_process {
+            //     for k in 0.. feat_count {
+            //         let mut g_k = 0.0;
+            //         for j in 0.. bin_count {
+            //             let mut x2s = sum_of_x2_j[n][k][j];
+            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
+            //         }
+            //         g[n][k] = g_k;
+            //     }
+            //     ans[n] = argmax(&g[n].clone())?;
+            // }
+    
+            ////////////////// TEST //////////////////// 
+            let mut j_mult = vec![vec![1 as usize; feat_count]; number_of_nodes_to_process];
+            
+            let mut gini_numerators_j = vec![0 as usize; feat_count * number_of_nodes_to_process * bin_count];
+            let mut gini_denominators_j = vec![0 as usize; feat_count * number_of_nodes_to_process * bin_count];
+            let mut common_denominator: Vec<Vec<usize>> = vec![];
+            let mut common_denominator_withoutj: Vec<Vec<usize>> = vec![];
+        
+            for n in 0.. number_of_nodes_to_process {
+                for k in 0.. feat_count {
+                    let mut common_dem_values = vec![];
+                    for j in 0.. bin_count {
+                        gini_numerators_j[n * feat_count * bin_count + k * bin_count + j] = sum_of_x2_j[n][k][j];
+    
+                        common_dem_values.push(y_partitioned[n][k][j].clone());
+    
+                        let mut tmp = vec![];
+                        for not_j in 0.. bin_count {
+                            if j != not_j {
+                                tmp.push(y_partitioned[n][k][not_j])
+                            }
+                        }     
+    
+                        common_denominator_withoutj.push(tmp);      
+                    }
+    
+                    common_denominator.push(common_dem_values);
+    
+                }
+            }
+    
+            let common_denominator_withoutj = protocol_par(&common_denominator_withoutj);
+            let common_denominator = protocol_par(&common_denominator);
+            let gini_numerators_unsummed = protocol_mult(&gini_numerators_j, &common_denominator_withoutj);
+    
+            for v in 0.. feat_count * number_of_nodes_to_process {
+                gini_numerators[v] = gini_numerators_unsummed[bin_count * v.. bin_count * (v + 1)].to_vec().iter().sum();
+            }
+            
+            let gini_denominators = common_denominator;
+            ///// END TEST ////////////////////////////
+    
+    
+            /////////////////////////////////////////// COMPUTE ARGMAX ///////////////////////////////////////////
+    
+            let mut current_length = feat_count;
+    
+            let mut logical_partition_lengths = vec![];
+    
+            let mut new_numerators = gini_numerators.clone();
+            let mut new_denominators = gini_denominators.clone();
+    
+            // this will allow us to calculate the arg_max
+            let mut past_assignments = vec![];
+    
+            loop {
+    
+                let odd_length = current_length % 2 == 1;
+            
+                let mut forgotten_numerators = vec![];
+                let mut forgotten_denominators = vec![];
+        
+                let mut current_numerators = vec![];
+                let mut current_denominators = vec![];
+        
+                // if its of odd length, make current nums/dems even lengthed, and store the 'forgotten' values
+                // it should be guarenteed that we have numerators/denonminators of even length
+                if odd_length {
+                    for n in 0 .. number_of_nodes_to_process {
+                        current_numerators.append(&mut new_numerators[n * (current_length).. (n + 1) * (current_length - 1) + n].to_vec());
+                        current_denominators.append(&mut new_denominators[n * (current_length).. (n + 1) * (current_length - 1) + n].to_vec());
+        
+                        forgotten_numerators.push(new_numerators[(n + 1) * (current_length - 1) + n]);
+                        forgotten_denominators.push(new_denominators[(n + 1) * (current_length - 1) + n]);
+        
+                    }
+                } else {
+                    current_numerators = new_numerators.clone();
+                    current_denominators = new_denominators.clone();
+                }
+        
+                // if denominators were originally indexed as d_1, d_2, d_3, d_4... then they are now represented
+                // as d_2, d_1, d_4, d_3... This is helpful for comparisons
+                let mut current_denominators_flipped = vec![];
+                for v in 0 .. current_denominators.len()/2 {
+                    current_denominators_flipped.push(current_denominators[2 * v + 1]);
+                    current_denominators_flipped.push(current_denominators[2 * v]);
+                }
+        
+                let product = protocol_mult(&current_numerators, &current_denominators_flipped);
+        
+                let mut l_operands = vec![];
+                let mut r_operands = vec![];
+        
+                // left operands should be of the form n_1d_2, n_3d_4...
+                // right operands should be of the form n_2d_1, n_4d_3...
+                for v in 0..product.len()/2 {
+                    l_operands.push(product[2 * v]);
+                    r_operands.push(product[2 * v + 1]);
+                }
+        
+                // read this as "left is greater than or equal to right." value in array will be [1] if true, [0] if false.
+                let l_geq_r = protocol_geq(&l_operands, &r_operands);  
+        
+                // read this is "left is less than right"
+                let l_lt_r: Vec<usize> = l_geq_r.iter().map(|x| 1 - x).collect();
+        
+                // grab the original values 
+                let mut values = current_numerators.clone();
+                values.append(&mut current_denominators.clone());
+        
+                // For the next iteration
+                let mut assignments = vec![];
+                // For record keeping
+                let mut gini_assignments = vec![];
+        
+                // alternate the left/right values to help to cancel out the original values
+                // that lost in their comparison
+                for v in 0..l_geq_r.len() {
+                    assignments.push(l_geq_r[v]);
+                    assignments.push(l_lt_r[v]);
+        
+                    gini_assignments.push(l_geq_r[v]);
+                    gini_assignments.push(l_lt_r[v]);
+        
+                    let size = current_length/2;
+                    if odd_length && ((v + 1) % size == 0) {
+                        gini_assignments.push(1);
+                    }
+                }
+        
+                logical_partition_lengths.push(current_length);
+                past_assignments.push(gini_assignments); 
+        
+                // EXIT CONDITION
+                if 1 == (current_length/2) + (current_length % 2) {break;}
+        
+                assignments.append(&mut assignments.clone());
+        
+                let comparison_results = protocol_mult(&values, &assignments);
+        
+                new_numerators = vec![];
+                new_denominators = vec![];
+        
+                // re-construct new_nums and new_dems
+                for v in 0.. values.len()/4 {
+    
+                    new_numerators.push(comparison_results[2 * v] + comparison_results[2 * v + 1]);
+                    new_denominators.push(comparison_results[values.len()/2 + 2 * v] + comparison_results[values.len()/2 + 2 * v + 1]);
+    
+                    if odd_length && ((v + 1) % (current_length/2) == 0) {
+                        // ensures no division by 0
+                        let divisor = if current_length > 1 {current_length/2} else {1};
+                        new_numerators.push(forgotten_numerators[(v/divisor)]);
+                        new_denominators.push(forgotten_denominators[(v/divisor)]);
+                    }
+        
+                }
+        
+                current_length = (current_length/2) + (current_length % 2);
+            }
+    
+            // calculates flat arg_max in a tournament bracket style
+            for v in (1..past_assignments.len()).rev() {
+    
+                if past_assignments[v].len() == past_assignments[v - 1].len() {
+                    past_assignments[v - 1] = protocol_mult(&past_assignments[v - 1], &past_assignments[v]);
+                    continue;
+                }
+    
+                let mut extended_past_assignment_v = vec![];
+                for w in 0.. past_assignments[v].len() {
+                    if ((w + 1) % logical_partition_lengths[v] == 0) && ((logical_partition_lengths[v - 1] % 2) == 1) {
+                        extended_past_assignment_v.push(past_assignments[v][w]);
+                        continue;
+                    }
+                    extended_past_assignment_v.push(past_assignments[v][w]);
+                    extended_past_assignment_v.push(past_assignments[v][w]);
+                }
+                past_assignments[v - 1] = protocol_mult(&past_assignments[v - 1], &extended_past_assignment_v);
+            }
+    
+            // un-flatten arg_max
+            for n in 0.. number_of_nodes_to_process {
+                if feat_count == 1 { // if there is only one attr count
+                    gini_arg_max.push(vec![1 as usize]);
+                } else {
+                    gini_arg_max.push(past_assignments[0][n * feat_count.. (n + 1) * feat_count].to_vec());
+                }
+            }
+    
+            // ADDED: un-OHE argmax
+            let mut tmp = vec![];
+            for k in 0.. feat_count {
+                tmp.push(k);
+            }
+    
+            let mut new_gini = vec![];
+    
+            for argm in gini_arg_max {
+                new_gini.push(protocol_dot(&tmp.clone(), &argm))
+            }
+            assert_eq!(new_gini.len(), number_of_nodes_to_process);
+    
+            Ok(new_gini)
+        }
+
 
 pub fn gini_impurity_secure_algorithm_updated(disc_data: &Vec<Vec<Vec<usize>>>, depth: usize, labels: &Vec<Vec<usize>>, 
     active_rows: &Vec<Vec<usize>>, ctx: &Context) -> Result<Vec<usize>, Box<dyn Error>> {
