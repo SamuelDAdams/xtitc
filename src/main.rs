@@ -36,17 +36,17 @@ fn main() {
     let (ctx, data, classes, data_test, classes_test) = init(&fileloc.to_string()).unwrap();
     if ctx.discretize_per_node {
 
-        // let mode: &str = "traditional";
+        let mode: &str = "traditional";
         let (disc_data, feature_selectors, feature_values) = xt_preprocess_per_node(&data, &ctx).unwrap();
-        // let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
-        // let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        // let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        // println!("argmax acc = {}, softvote_acc = {}", argmax_acc * 100.0, softvote_acc * 100.0);
+        let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
+        let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
+        println!("argmax: {} %, softvote: {} %, 1324132412341234123423 seconds", argmax_acc * 100.0, softvote_acc * 100.0);
         let mode: &str = "secure_old";
         let trees = sid3t_per_node(&disc_data, &classes, &feature_selectors, &feature_values, &ctx, mode).unwrap();
         let argmax_acc = classify_argmax(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
         let softvote_acc = classify_softvote(&trees.clone(), &data_test.clone(), &classes_test[1].clone(), &ctx).unwrap();
-        println!("argmax: {} %, softvote: = {} %, 1324132412341234123423 seconds", argmax_acc * 100.0, softvote_acc * 100.0);
+        println!("argmax: {} %, softvote: {} %, 1324132412341234123423 seconds", argmax_acc * 100.0, softvote_acc * 100.0);
 
     } else {
 
@@ -385,65 +385,6 @@ pub fn xt_preprocess(data: &Vec<Vec<f64>>, ctx: &Context) -> Result<(Vec<Vec<Vec
         sel_vals.push(vals);
         structured_features.push(feats);
     }
-
-
-    // for val in  structured_features.clone() {
-    //     val.iter().for_each(|x| print!("{},", x));  
-    //     print!("\n");
-    // }
-    // for val in  sel_vals.clone() {
-    //     val.iter().for_each(|x| print!("{},", x));  
-    //     print!("\n");
-    // }
-
-    
-
-    // let structured_features = vec![
-    //     vec![15, 14, 0, 19, 29],
-    //     vec![19, 25, 28, 17, 14],
-    //     vec![27, 0, 15, 3, 14],
-    //     vec![7, 11, 6, 27, 8],
-    //     vec![0, 26, 2, 16, 24],
-    //     vec![21, 6, 6, 24, 13],
-    //     vec![4, 24, 27, 12, 9],
-    //     vec![22, 16, 3, 4, 14],
-    //     vec![13, 11, 28, 24, 25],
-    //     vec![26, 23, 16, 26, 20],
-    //     vec![26, 1, 6, 26, 12],
-    //     vec![4, 15, 28, 8, 14],
-    //     vec![21, 21, 0, 22, 9],
-    //     vec![20, 17, 10, 28, 2],
-    //     vec![3, 1, 5, 14, 12],
-    //     vec![0, 27, 22, 18, 1],
-    //     vec![24, 27, 28, 19, 7],
-    //     vec![4, 21, 7, 13, 11],
-    //     vec![12, 7, 19, 0, 3],
-    //     vec![8, 23, 19, 16, 26]  
-    // ];
-
-    // let sel_vals = 
-    // vec![
-    //     vec![107.96484375, 26.130859375, 22555.54296875, 3.341796875, 83.4775390625],
-    //     vec![19.931640625, 82.650390625, 315.03125, 20.8095703125, 22.68359375],
-    //     vec![84.9697265625, 7020.529296875, 125.388671875, 1363377.44140625, 22.626953125],
-    //     vec![60.341796875, 452.994140625, 285.6552734375, 241.8369140625, 192.4248046875],
-    //     vec![8878.40625, 59.4140625, 146982.2265625, 24.8837890625, 124.111328125],
-    //     vec![22222.861328125, 89.943359375, 218.197265625, 99.267578125, 122878.177734375],
-    //     vec![72.5341796875, 93.3515625, 194.0947265625, 10727.576171875, 79.048828125],
-    //     vec![120638.30078125, 94.138671875, 2046344.23828125, 85.298828125, 4.98828125],
-    //     vec![15077.998046875, 2989.3564453125, 192.169921875, 180.8974609375, 1022.7705078125],
-    //     vec![1042.03125, 923973.828125, 108.2294921875, 1149.43359375, 33080.78125],
-    //     vec![715.25390625, 11546.923828125, 413.908203125, 484.453125, 5671.7890625],
-    //     vec![85.5146484375, 31.248046875, 246.6650390625, 281.6845703125, 16.1337890625],
-    //     vec![27650.107421875, 29821.005859375, 21606.83984375, 67879.7265625, 65.681640625],
-    //     vec![19299.53125, 37.0263671875, 600.6435546875, 631.1025390625, 76746.6796875],
-    //     vec![1116521.97265625, 25641.533203125, 61.724609375, 12.5146484375, 10506.0078125],
-    //     vec![18167.791015625, 269.6865234375, 160469.27734375, 35.2265625, 12370.634765625],
-    //     vec![164.3349609375, 134.4169921875, 660.8271484375, 17.3662109375, 188.498046875],
-    //     vec![122.5107421875, 45234.384765625, 66.693359375, 68129.267578125, 1398.6064453125],
-    //     vec![7242.91015625, 178.0361328125, 3.1708984375, 22278.837890625, 384184.08203125],
-    //     vec![276.9296875, 3187855.859375, 7.4892578125, 20.6865234375, 543.8671875]
-    // ];
 
     let mut disc_subsets = vec![];
     for i in 0 .. ctx.tree_count {
@@ -1136,50 +1077,15 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
                 }
     
             }
-    
-    
-    
-            // ////////////////// TEST //////////////////// RETURNS CORRECT RESULTS 
-    
-    
-            // let mut ans = vec![0; number_of_nodes_to_process];
-            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
-    
-            // for n in 0.. number_of_nodes_to_process {
-            //     for k in 0.. feat_count {
-            //         let mut g_k = 0.0;
-            //         for j in 0.. bin_count {
-            //             let mut x2s = 0;
-            //             for i in 0.. class_label_count {
-            //                 let base = x_partitioned[n][k][i][j];
-            //                 let x2 = base.pow(2);
-            //                 x2s += x2;
-            //             }
-            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
-            //         }
-            //         g[n][k] = g_k;
-            //     }
-            //     ans[n] = argmax(&g[n].clone())?;
-            // }
-            // return Ok(ans);
-    
-    
-            // ///// END TEST ////////////////////////////
-    
-            
-    
-    
-    
-    
-    
+
             let mut all_x_values = vec![];
     
             for n in 0..number_of_nodes_to_process {
                 for k in 0..feat_count { // should also be indexed by j?
                     y_partitioned[n][k][0] =
-                        alpha * y_partitioned[n][k][0] + 0;
+                        alpha * y_partitioned[n][k][0] + 1;
                     y_partitioned[n][k][1] =
-                        alpha * y_partitioned[n][k][1] + 0;
+                        alpha * y_partitioned[n][k][1] + 1;
     
                     // will be used to find x^2
                     for i in 0..class_label_count {
@@ -1197,43 +1103,7 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
                 }
             }
     
-    
-    
-    
-    
-            // ////////////////// TEST //////////////////// failed...?
-            // // 
-            // // returns correct result IF  we don't multiply y values b alpha and then add 1. However,
-            // // still returns wrong answer if we don't do the former operations, but let the algorithm run to its end
-            // // which is strange.
-    
-    
-            // let mut ans = vec![0; number_of_nodes_to_process];
-            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
-    
-            // for n in 0.. number_of_nodes_to_process {
-            //     for k in 0.. feat_count {
-            //         let mut g_k = 0.0;
-            //         for j in 0.. bin_count {
-            //             let mut x2s = 0;
-            //             for i in 0.. class_label_count {
-            //                 x2s += x2[n][k][i][j];
-            //             }
-            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
-            //         }
-            //         g[n][k] = g_k;
-            //     }
-            //     ans[n] = argmax(&g[n].clone())?;
-            // }
-            // return Ok(ans);
-    
-    
-            // ///// END TEST ////////////////////////////
-    
-    
-    
-    
-    
+
     
             // At this point we have all of our x, x^2 and y values. Now we can start calculation gini numerators/denominators
             let mut sum_of_x2_j =  vec![vec![vec![0; bin_count]; feat_count]; number_of_nodes_to_process];
@@ -1299,35 +1169,6 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
                 }
             } 
     
-    
-    
-    
-            // ////////////////// TEST //////////////////// failed...?
-            // // returns correct result IF  we don't multiply y values b alpha and then add 1. However,
-            // // still returns wrong answer if we don't do the former operations, but let the algorithm run to its end
-            // // which is strange.
-            // let mut ans = vec![0; number_of_nodes_to_process];
-            // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
-    
-            // for n in 0.. number_of_nodes_to_process {
-            //     for k in 0.. feat_count {
-            //         let mut g_k = 0.0;
-            //         for j in 0.. bin_count {
-            //             let mut x2s = sum_of_x2_j[n][k][j];
-            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
-            //         }
-            //         g[n][k] = g_k;
-            //     }
-            //     ans[n] = argmax(&g[n].clone())?;
-            // }
-            // return Ok(ans);
-    
-            // ///// END TEST ////////////////////////////
-    
-    
-    
-    
-    
             let d_exclude_j = protocol_par(&d_exclude_j);
             let d_include_j = protocol_par(&d_include_j);
     
@@ -1348,45 +1189,6 @@ pub fn gini_impurity_secure_algorithm_old(disc_data: &Vec<Vec<Vec<usize>>>, dept
             // println!("{}: {:?}", gini_numerators.len(), gini_numerators); //test
             // println!("{}: {:?}", gini_denominators.len(), gini_denominators); //test
     
-    
-    
-            // //////////// TEST //////////////// RETURNS INCORRECT RESULT (regardless of alpha value)
-    
-            // let mut gini_ratio = vec![];
-    
-            // for v in 0.. gini_numerators.len() / feat_count {
-            //     let mut tmp = vec![];
-            //     for n in 0..feat_count {
-            //         let idx = v * feat_count + n;
-            //         tmp.push(gini_numerators[idx] as f64 / gini_denominators[idx] as f64)
-            //     }
-            //     gini_ratio.push(argmax(&tmp)?);
-            // }
-            // return Ok(gini_ratio);
-    
-    
-            // //// END TEST //////////// 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-            // for n in 0.. number_of_nodes_to_process {
-            //     for k in 0.. feat_count {
-            //         let mut g_k = 0.0;
-            //         for j in 0.. bin_count {
-            //             let mut x2s = sum_of_x2_j[n][k][j];
-            //             g_k += x2s as f64 / y_partitioned[n][k][j] as f64;
-            //         }
-            //         g[n][k] = g_k;
-            //     }
-            //     ans[n] = argmax(&g[n].clone())?;
-            // }
     
             ////////////////// TEST //////////////////// 
             let mut j_mult = vec![vec![1 as usize; feat_count]; number_of_nodes_to_process];
