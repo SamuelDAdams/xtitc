@@ -1549,6 +1549,33 @@ pub fn gini_impurity_secure_algorithm_updated(disc_data: &Vec<Vec<Vec<usize>>>, 
         }
 
 
+        ////////////////// TEST //////////////////// RETURNS CORRECT RESULTS 
+
+
+        // let mut ans = vec![0; number_of_nodes_to_process];
+        // let mut g = vec![vec![0.0; feat_count]; number_of_nodes_to_process];
+
+        // for n in 0.. number_of_nodes_to_process {
+        //     for k in 0.. feat_count {
+        //         let mut g_k = 0.0;
+        //         for j in 0.. bin_count {
+        //             let mut x2s = 0;
+        //             for i in 0.. class_label_count {
+        //                 let base = x_partitioned[n][k][i][j];
+        //                 let x2 = base.pow(2);
+        //                 x2s += x2;
+        //             }
+        //             g_k += x2s as f64 / (y_partitioned[n][k][j] + 1) as f64;
+        //         }
+        //         g[n][k] = g_k;
+        //     }
+        //     ans[n] = argmax(&g[n].clone())?;
+        // }
+        // return Ok(ans);
+
+
+        ///// END TEST ////////////////////////////
+
 
         // ////////////////// TEST //////////////////// RETURNS CORRECT RESULTS 
 
@@ -1588,9 +1615,9 @@ pub fn gini_impurity_secure_algorithm_updated(disc_data: &Vec<Vec<Vec<usize>>>, 
         for n in 0..number_of_nodes_to_process {
             for k in 0..feat_count { // should also be indexed by j?
                 y_partitioned[n][k][0] =
-                    alpha * y_partitioned[n][k][0] + 0;
+                    alpha * y_partitioned[n][k][0] + 1;
                 y_partitioned[n][k][1] =
-                    alpha * y_partitioned[n][k][1] + 0;
+                    alpha * y_partitioned[n][k][1] + 1;
 
                 // will be used to find x^2
                 for i in 0..class_label_count {
@@ -2091,9 +2118,9 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         let mut gini = 0 as f64;
         // Assumes binary classificaiton
         for j in 0.. ctx.bin_count {
-            let val_0: f64 = bins[j][0]/weights[j];
-            let val_1: f64 = bins[j][1]/weights[j];
-            gini += ((val_0 * val_0) + (val_1 * val_1)) * (weights[j]/weight_sum);
+            let val_0: f64 = bins[j][0]/(weights[j] + 1.0);
+            let val_1: f64 = bins[j][1]/(weights[j] + 1.0);
+            gini += ((val_0 * val_0) + (val_1 * val_1)) * (weights[j]/(weight_sum + 1.0));
         }
 
 
