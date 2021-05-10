@@ -2118,9 +2118,9 @@ pub fn gini_impurity(disc_data: &Vec<Vec<Vec<usize>>>, number_of_nodes_per_tree:
         let mut gini = 0 as f64;
         // Assumes binary classificaiton
         for j in 0.. ctx.bin_count {
-            let val_0: f64 = bins[j][0]/(weights[j] + 1.0);
-            let val_1: f64 = bins[j][1]/(weights[j] + 1.0);
-            gini += ((val_0 * val_0) + (val_1 * val_1)) * (weights[j]/(weight_sum + 1.0));
+            let val_0: f64 = bins[j][0]/weights[j];
+            let val_1: f64 = bins[j][1]/weights[j];
+            gini += ((val_0 * val_0) + (val_1 * val_1)) * (weights[j]/weight_sum);
         }
 
 
